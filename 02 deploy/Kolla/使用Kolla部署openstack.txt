@@ -1,0 +1,81 @@
+使用Kolla部署openstack
+
+
+
+
+
+原文  http://1.chaoxu.sinaapp.com/archives/4010
+
+
+1、加入 Docker 的源
+
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+2、安装 EPEL 源
+
+yum install -y epel-release
+
+
+3、kolla安装
+
+yum -y install python-pip libffi-devel python-devel openssl-devel git ansible gcc python-setuptools
+yum -y install docker-engine-1.11.2-1.el7.centos.x86_64
+
+
+4、开启Docker的MountFlags
+
+sed -i 's/MountFlags.*/MountFlags=shared/' /usr/lib/systemd/system/docker.service
+
+
+5、修改 /usr/lib/systemd/system/docker.service 文件，添加–insecure-registry，如下:
+
+ExecStart=/usr/bin/docker daemon -H fd:// --insecure-registry git.trystack.cn:5000
+
+systemctl daemon-reload && systemctl restart docker
+
+git clone https://git.openstack.org/openstack/kolla
+pip install kolla/    #### 需要上网下载，很慢，失败了请重新执行
+cd kolla
+pip --default-timeout=100 install -r requirements.txt tox
+tox -e genconfig    #### 需要上网下载，很慢，失败了请重新执行
+cp -r etc/kolla /etc/
+
+
+6、部署openstack
+
+使用下面命令生成各服务的密码
+
+kolla-genpwd
+
+
+7、执行命令后，编辑/etc/kolla/passwords.yml文件。可以修改 keystone_admin_password 的值。
+
+
+
+8、编辑 /etc/kolla/globals.yml 文件，如下。这里我们使用99cloud的Trystack docker源。
+
+kolla_install_type: “source”
+kolla_internal_vip_address: “10.10.33.12”  //访问Dashboard的地址
+docker_registry: "git.trystack.cn:5000"
+docker_namespace: “99cloud”
+
+
+9、使用下面命令检查配置是否正确
+
+./tools/kolla-ansible -i /usr/share/kolla/ansible/inventory/all-in-one prechecks
+
+
+10、使用下面命令开始部署openstack
+
+./tools/kolla-ansible -i /usr/share/kolla/ansible/inventory/all-in-one deploy
+
+
+11、部署完后，访问虚拟IP地址 http://10.10.33.12

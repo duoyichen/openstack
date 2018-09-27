@@ -1,0 +1,140 @@
+vi resource_used.sh
+i
+
+
+#!/bin/bash
+
+
+#mail_list="martin@cloudmind.cn chenying@cloudmind.cn duoyichen@qq.com"
+mail_list="chenying@cloudmind.cn duoyichen@qq.com"
+threshold_ratio=20
+let "threshold_ratio_vcpu=4*${threshold_ratio}"
+result_path="result"
+
+used_percent()
+{
+    source /root/openrc
+    var1=`nova hypervisor-stats|grep $1_used|cut -d '|' -f 3|cut -d ' ' -f 2`
+    var2=`nova hypervisor-stats|grep $1|grep -v $1_used|cut -d '|' -f 3|cut -d ' ' -f 2`
+    used_percent=$(printf "%d" $((var1*100/var2)))
+
+    if [ ${used_percent} -gt $2 ];then
+        date0=`date +%s`
+        date=`date -d @${date0} "+%Y-%m-%d %H:%M:%S"`
+        date2=`date -d @${date0} "+%Y-%m-%d_%H-%M-%S"`
+        subject="Cloud Platform Resource Usage is too High!($date)"
+
+        if [ -f $1.txt ];then
+            if [ ! -d ./${result_path} ];then
+                echo "${result_path} Directory not exsit, Make it..."
+                mkdir -p ./${result_path}
+            fi
+            mv $1.txt ./${result_path}/$1.txt.result_${date2}
+            echo "The old $1.txt mv to ${result_path} and The filename is $1.txt.result_${date2}"
+        fi
+
+        printf "$1 Usage\n" >> $1.txt
+        printf "%16s : %8s\n" "----------------" "----------------" >> $1.txt
+        printf "%16s : %8s\n" "Used" "$var1" >> $1.txt
+        printf "%16s : %8s\n" "Total" "$var2" >> $1.txt
+        printf "%16s : %8s\n" "Usage rate" "${used_percent}%" >> $1.txt
+        printf "\n" >> $1.txt
+        printf "Get Info On [${date}]\n" >> $1.txt
+
+        unix2dos $1.txt
+        mail -s "$subject" -c $mail_list < $1.txt
+    fi
+}
+
+#used_percent vcpus $threshold_ratio_vcpu
+used_percent memory_mb $threshold_ratio
+#used_percent local_gb $threshold_ratio
+
+
+
+
+
+
+格式化输出：
+
+
+
+#!/bin/bash
+
+
+mail_list="martin@cloudmind.cn chenying@cloudmind.cn duoyichen@qq.com"
+#mail_list="chenying@cloudmind.cn duoyichen@qq.com"
+threshold_ratio=80
+let "threshold_ratio_vcpu=4*${threshold_ratio}"
+result_path="result"
+
+used_percent()
+{
+    source /root/openrc
+    var1=`nova hypervisor-stats|grep $1_used|cut -d '|' -f 3|cut -d ' ' -f 2`
+    var2=`nova hypervisor-stats|grep $1|grep -v $1_used|cut -d '|' -f 3|cut -d ' ' -f 2`
+    used_percent=$(printf "%d" $((var1*100/var2)))
+
+    if [ ${used_percent} -gt $2 ];then
+        date0=`date +%s`
+        date=`date -d @${date0} "+%Y-%m-%d %H:%M:%S"`
+        date2=`date -d @${date0} "+%Y-%m-%d_%H-%M-%S"`
+        subject="Cloud Platform Resource Usage is too High!($date)"
+
+        if [ -f $1.txt ];then
+            if [ ! -d ./${result_path} ];then
+                echo "${result_path} Directory not exsit, Make it..."
+                mkdir -p ./${result_path}
+            fi
+            mv $1.txt ./${result_path}/$1.txt.result_${date2}
+            echo "The old $1.txt mv to ${result_path} and The filename is $1.txt.result_${date2}"
+        fi
+
+        printf "$1 Usage\n" >> $1.txt
+        printf "%16s : %8s\n" "----------------" "----------------" >> $1.txt
+        printf "%18s : %8s\n" "Used" "$var1" >> $1.txt
+        printf "%19s : %8s\n" "Total" "$var2" >> $1.txt
+        printf "%16s : %8s\n" "Usage rate" "${used_percent}%" >> $1.txt
+        printf "\n" >> $1.txt
+        printf "Get Info On [${date}]\n" >> $1.txt
+
+#        unix2dos $1.txt
+        mail -s "$subject" -c $mail_list < $1.txt
+    fi
+}
+
+used_percent vcpus $threshold_ratio_vcpu
+used_percent memory_mb $threshold_ratio
+used_percent local_gb $threshold_ratio
+
+
+
+
+
+
+
+
+
+
+used_percent()
+{
+    memory_mb=`nova hypervisor-stats|grep memory_mb|grep -v memory_mb_used|cut -d '|' -f 3|cut -d ' ' -f 2`
+    memory_mb_used=`nova hypervisor-stats|grep memory_mb_used|cut -d '|' -f 3|cut -d ' ' -f 2`
+    memory_mb_used_percent=$(printf "%d%%" $((memory_mb_used*100/memory_mb)))
+}
+
+
+
+
+
+
+
+
+#!/bin/bash
+a=38
+b=100
+
+percent_1=$(printf "%d%%" $((a*100/b)))
+percent_2=`awk 'BEGIN{printf "%.2f%%\n",('$a'/'$b')*100}'`
+echo $percent_1
+echo $percent_2

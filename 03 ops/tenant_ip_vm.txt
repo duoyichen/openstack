@@ -1,0 +1,26 @@
+
+
+vim tenant_ip_vm.sh
+
+
+#!/bin/bash
+
+source /root/openrc
+
+vm_id=`cat nova_list.txt | grep ','|cut -d " " -f 2`
+
+printf "%16s  :  %-16s : %-16s\n" "----------------" "----------------" "----------------" >> tenant_ip_vm.txt
+
+for i in ${vm_id}
+do
+    tenant_id=`nova show $i | awk '/tenant_id/ {print $4}'`
+    tenant_name=`keystone tenant-list|awk '/'"${tenant_id}"'/ {print $4}'`
+
+    tenant_ip=`cat nova_list.txt |grep $i|cut -d , -f 2|cut -d ' ' -f 2`
+
+    tenant_vm_name=`cat nova_list.txt |grep $i|cut -d ' ' -f 4`
+
+    printf "%16s  :  %-16s : %-16s\n" "${tenant_name}" "${tenant_ip}" "${tenant_vm_name}" >> tenant_ip_vm.txt
+done
+
+

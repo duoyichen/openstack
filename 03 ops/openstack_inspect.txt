@@ -1,0 +1,63 @@
+vi openstack_inspect.sh
+i
+
+#/bin/bash
+
+
+mail_list="chenying@cloudmind.cn" 
+mail_list_copy="martin@cloudmind.cn zhangjl@cloudmind.cn duoyichen@qq.com" 
+#mail_list_copy="chenying@cloudmind.cn duoyichen@qq.com"
+result_path="result"
+date0=`date +%s`
+date=`date -d @${date0} "+%Y-%m-%d_%H-%M-%S"`
+date2=`date -d @${date0} "+%Y-%m-%d %H:%M:%S"`
+report_file="./${result_path}/Openstack-Inspect-Report.${date}.txt"
+subject="Cloud Platform Inspect Report!($date2)"
+
+if [ ! -d ./${result_path} ];then
+    echo "${result_path} Directory not exsit, Make it..."
+    mkdir -p ./${result_path}
+fi
+
+echo "$subject" >> ${report_file};
+echo "--------------------------------------------------------------------------------" >> ${report_file};
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "openstack-status | grep -vE 'active|disabled|== |000'" >> ${report_file};
+echo "----------------------------------------------------" >> ${report_file};
+
+for i in `cat /etc/hosts|awk '/node-/ {print $3}'|sort`;
+do
+    echo "" >> ${report_file};
+    echo "------------ $i ------------" >> ${report_file};
+    ssh $i "openstack-status | grep -vE 'active|disabled|== |000'" >> ${report_file};
+done
+
+
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "ceph osd tree | grep -vE 'up|host|root|osd.24|osd.28'" >> ${report_file};
+echo "----------------------------------------------------" >> ${report_file};
+echo "" >> ${report_file};
+ceph osd tree | grep -vE 'up|host|root|osd.24|osd.28' >> ${report_file};
+
+
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "ceph -s" >> ${report_file};
+echo "----------------------------------------------------" >> ${report_file};
+echo "" >> ${report_file};
+ceph -s >> ${report_file};
+
+
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "----------------------------------------" >> ${report_file};
+echo "    Get Info On [${date2}]" >> ${report_file};
+echo "----------------------------------------" >> ${report_file};
+
+
+mail -s "$subject" -c "$mail_list_copy" "$mail_list" < ${report_file}
+#mail -s "$subject" -c "$mail_list_copy" chenying@cloudmind.cn < ${report_file}
+
+

@@ -1,0 +1,464 @@
+
+
+yum install -y openstack-dashboard
+
+sed -i 's/OPENSTACK_HOST = "127.0.0.1"/OPENSTACK_HOST = "controller"/g' \
+/etc/openstack-dashboard/local_settings
+
+sed -i "s/ALLOWED_HOSTS = \['horizon.example.com', 'localhost'\]/ALLOWED_HOSTS = \['*',\]/g" \
+/etc/openstack-dashboard/local_settings
+
+
+
+
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+
+CACHES = {
+    'default': {
+         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+         'LOCATION': 'controller:11211',
+    }
+}
+
+
+
+
+
+sed -i "/^CACHES = {/iSESSION_ENGINE = 'django.contrib.sessions.backends.cache'" \
+/etc/openstack-dashboard/local_settings
+
+
+sed -i "/'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',/\
+a\        'LOCATION': 'controller:11211'," \
+/etc/openstack-dashboard/local_settings
+
+sed -i "s/'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',/\
+'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',/g" \
+/etc/openstack-dashboard/local_settings
+
+sed -i "s@:5000/v2.0@:5000/v3@g" \
+/etc/openstack-dashboard/local_settings
+
+sed -i '/^#OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT /a\
+OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True' \
+/etc/openstack-dashboard/local_settings
+
+
+sed -i '/Set this to True if running on multi-domain model./i\
+OPENSTACK_API_VERSIONS = {\
+    "identity": 3,\
+    "image": 2,\
+    "volume": 2,\
+}\
+' \
+/etc/openstack-dashboard/local_settings
+
+
+sed -i "/^#OPENSTACK_KEYSTONE_DEFAULT_DOMAIN/\
+a\OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = \"default\"" \
+/etc/openstack-dashboard/local_settings
+
+sed -i 's/ "_member_"/ "user"/g' \
+/etc/openstack-dashboard/local_settings
+
+
+
+sed -i "s/'enable_router': True,/'enable_router': False,/g" \
+/etc/openstack-dashboard/local_settings
+sed -i "s/'enable_quotas': True,/'enable_quotas': False,/g" \
+/etc/openstack-dashboard/local_settings
+
+sed -i "s/'enable_lb': True,/'enable_lb': False,/g" \
+/etc/openstack-dashboard/local_settings
+sed -i "s/'enable_firewall': True,/'enable_firewall': False,/g" \
+/etc/openstack-dashboard/local_settings
+
+sed -i "s/'enable_vpn': True,/'enable_vpn': False,/g" \
+/etc/openstack-dashboard/local_settings
+sed -i "s/'enable_fip_topology_check': True,/'enable_fip_topology_check': False,/g" \
+/etc/openstack-dashboard/local_settings
+
+
+
+sed -i 's/TIME_ZONE = "UTC"/TIME_ZONE = "Asia\/Shanghai"/g' \
+/etc/openstack-dashboard/local_settings
+
+
+
+systemctl restart httpd.service memcached.service
+
+
+
+setsebool -P httpd_can_network_connect on
+
+chown -R apache:apache /usr/share/openstack-dashboard/static
+
+
+http://10.10.33.11/dashboard
+admin  ADMIN_PASS_SUR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mysql -u root -pMYSQL_ROOT_PASS_TENDCLOUD
+CREATE DATABASE cinder;
+GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'localhost' \
+  IDENTIFIED BY 'CINDER_DBPASS_TENDCLOUD';
+GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'%' \
+  IDENTIFIED BY 'CINDER_DBPASS_TENDCLOUD';
+exit
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+openstack user create --domain default --password-prompt cinder
+CINDER_PASS_TENDCLOUD
+
+openstack role add --project service --user cinder admin
+
+
+
+openstack service create --name cinder \
+  --description "OpenStack Block Storage" volume
+openstack service create --name cinderv2 \
+  --description "OpenStack Block Storage" volumev2
+
+openstack endpoint create --region RegionOne \
+  volume public http://controller:8776/v1/%\(tenant_id\)s
+openstack endpoint create --region RegionOne \
+  volumev2 public http://controller:8776/v2/%\(tenant_id\)s
+
+openstack endpoint create --region RegionOne \
+  volume internal http://controller:8776/v1/%\(tenant_id\)s
+openstack endpoint create --region RegionOne \
+  volumev2 internal http://controller:8776/v2/%\(tenant_id\)s
+
+openstack endpoint create --region RegionOne \
+  volume admin http://controller:8776/v1/%\(tenant_id\)s
+openstack endpoint create --region RegionOne \
+  volumev2 admin http://controller:8776/v2/%\(tenant_id\)s
+
+
+
+
+yum install -y openstack-cinder
+
+
+
+
+openstack-config --set /etc/cinder/cinder.conf database \
+connection mysql+pymysql://cinder:CINDER_DBPASS_TENDCLOUD@controller/cinder
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+rpc_backend rabbit
+openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit \
+rabbit_host controller
+openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit \
+rabbit_userid guest
+openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit \
+rabbit_password RABBIT_GUEST_PASS_TENDCLOUD
+
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+auth_strategy keystone
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_uri http://controller:5000
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_url http://controller:35357
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+memcached_servers controller:11211
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_type password
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+project_domain_name default
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+user_domain_name default
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+project_name service
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+username cinder
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+password CINDER_PASS_TENDCLOUD
+
+
+openstack-config --set /etc/cinder/cinder.conf oslo_concurrency \
+lock_path /var/lib/cinder/tmp
+
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+my_ip 10.10.33.11
+
+
+
+su -s /bin/sh -c "cinder-manage db sync" cinder
+
+
+
+openstack-config --set /etc/nova/nova.conf cinder \
+os_region_name RegionOne
+
+
+systemctl restart openstack-nova-api.service
+
+systemctl enable openstack-cinder-api.service openstack-cinder-scheduler.service
+systemctl start openstack-cinder-api.service openstack-cinder-scheduler.service
+
+
+
+
+
+
+
+
+
+
+yum install -y lvm2
+
+systemctl enable lvm2-lvmetad.service
+systemctl start lvm2-lvmetad.service
+
+vim /etc/lvm/lvm.conf
+
+sed -i '/devices {/a\
+\
+filter = [ "a\/sdd\/", "r\/.*\/"]' \
+/etc/lvm/lvm.conf
+
+
+
+pvcreate /dev/sdd
+vgcreate cinder-volumes /dev/sdd
+
+
+
+yum install -y openstack-cinder targetcli
+
+
+### 开始 ###
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+rpc_backend rabbit
+openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit \
+rabbit_host controller
+openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit \
+rabbit_userid guest
+openstack-config --set /etc/cinder/cinder.conf oslo_messaging_rabbit \
+rabbit_password RABBIT_GUEST_PASS_TENDCLOUD
+
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+auth_strategy keystone
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_uri http://controller:5000
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_url http://controller:35357
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+memcached_servers controller:11211
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_type password
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+project_domain_name default
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+user_domain_name default
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+project_name service
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+username cinder
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+password CINDER_PASS_TENDCLOUD
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+my_ip 10.10.33.11
+
+openstack-config --set /etc/cinder/cinder.conf oslo_concurrency \
+lock_path /var/lib/cinder/tmp
+
+### 结束 ###
+
+
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+enabled_backends lvm
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+glance_api_servers http://controller:9292
+
+openstack-config --set /etc/cinder/cinder.conf lvm \
+volume_driver cinder.volume.drivers.lvm.LVMVolumeDriver
+openstack-config --set /etc/cinder/cinder.conf lvm \
+volume_group cinder-volumes
+openstack-config --set /etc/cinder/cinder.conf lvm \
+iscsi_protocol iscsi
+openstack-config --set /etc/cinder/cinder.conf lvm \
+iscsi_helper lioadm
+
+
+systemctl enable openstack-cinder-volume.service target.service
+systemctl start openstack-cinder-volume.service target.service
+
+
+
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+cinder service-list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT rpc_backend rabbit
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT rabbit_host controller
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT rabbit_password RABBIT_GUEST_PASS_SUR
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+auth_strategy keystone
+
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_uri http://controller:5000/v2.0
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+identity_uri http://controller:35357
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+admin_tenant_name service
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+admin_user cinder
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+admin_password CINDER_PASS_SUR
+
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT my_ip 10.0.22.11
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT verbose True
+
+su -s /bin/sh -c "cinder-manage db sync" cinder
+
+
+systemctl enable openstack-cinder-api.service openstack-cinder-scheduler.service
+systemctl start openstack-cinder-api.service openstack-cinder-scheduler.service
+
+
+systemctl restart openstack-cinder-api.service openstack-cinder-scheduler.service
+
+
+
+
+
+
+
+
+
+compute1上
+
+
+
+
+yum install -y lvm2
+
+systemctl enable lvm2-lvmetad.service
+systemctl start lvm2-lvmetad.service
+
+pvcreate /dev/sdb
+vgcreate cinder-volumes /dev/sdb
+
+
+
+yum install -y openstack-cinder targetcli python-oslo-db MySQL-python
+
+### 01 Start ###
+
+openstack-config --set /etc/cinder/cinder.conf \
+database connection mysql://cinder:CINDER_DBPASS_SUR@controller/cinder
+
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT rpc_backend rabbit
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT rabbit_host controller
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT rabbit_password RABBIT_GUEST_PASS_SUR
+
+openstack-config --set /etc/cinder/cinder.conf DEFAULT \
+auth_strategy keystone
+
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+auth_uri http://controller:5000/v2.0
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+identity_uri http://controller:35357
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+admin_tenant_name service
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+admin_user cinder
+openstack-config --set /etc/cinder/cinder.conf keystone_authtoken \
+admin_password CINDER_PASS_SUR
+
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT my_ip 10.0.33.31
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT verbose True
+
+### 01 End ###
+
+
+
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT glance_host controller
+openstack-config --set /etc/cinder/cinder.conf \
+DEFAULT iscsi_helper lioadm
+
+
+systemctl enable openstack-cinder-volume.service target.service
+systemctl restart openstack-cinder-volume.service target.service
+
+
+
+
+for i in 37 36 35 34 33 32 31 11;do ssh 10.10.33.$i 'date';done
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+cinder service-list
+
+
+
+source /etc/tenant/demo-openrc.sh
+
+cinder create --display-name demo-volume 1
+
+cinder list
+
+
+
+
+
+
+

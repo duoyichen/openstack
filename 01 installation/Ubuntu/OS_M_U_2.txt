@@ -1,0 +1,360 @@
+apt-get install neutron-server neutron-plugin-ml2 \
+  neutron-linuxbridge-agent neutron-l3-agent neutron-dhcp-agent \
+  neutron-metadata-agent
+
+
+
+vi /etc/neutron/neutron.conf
+
+[database]
+...
+connection = mysql+pymysql://neutron:NEUTRON_DBPASS@controller/neutron
+
+其他的 connection ，官网没说，先注释掉
+
+
+[DEFAULT]
+...
+#core_plugin = ml2
+service_plugins = router
+allow_overlapping_ips = True
+rpc_backend = rabbit
+auth_strategy = keystone
+notify_nova_on_port_status_changes = True
+notify_nova_on_port_data_changes = True
+
+[oslo_messaging_rabbit]
+...
+rabbit_host = controller
+rabbit_userid = openstack
+rabbit_password = RABBIT_PASS
+
+
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+memcached_servers = controller:11211
+auth_type = password
+project_domain_name = default
+user_domain_name = default
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+
+
+[nova]
+...
+auth_url = http://controller:35357
+auth_type = password
+project_domain_name = default
+user_domain_name = default
+region_name = RegionOne
+project_name = service
+username = nova
+password = NOVA_PASS
+
+
+
+
+
+
+
+
+vi /etc/neutron/plugins/ml2/ml2_conf.ini
+
+[ml2]
+...
+type_drivers = flat,vlan,vxlan
+tenant_network_types = vxlan
+mechanism_drivers = linuxbridge,l2population
+extension_drivers = port_security
+
+[ml2_type_flat]
+...
+flat_networks = provider
+
+[ml2_type_vxlan]
+...
+vni_ranges = 1:1000
+
+[securitygroup]
+...
+enable_ipset = True
+
+
+
+vi /etc/neutron/plugins/ml2/linuxbridge_agent.ini
+
+[linux_bridge]
+physical_interface_mappings = provider:eth1
+
+[vxlan]
+enable_vxlan = True
+local_ip = 10.0.0.11
+l2_population = True
+
+[securitygroup]
+...
+enable_security_group = True
+firewall_driver = neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+
+
+
+vi /etc/neutron/l3_agent.ini
+
+[DEFAULT]
+...
+interface_driver = neutron.agent.linux.interface.BridgeInterfaceDriver
+external_network_bridge =
+
+
+
+vi /etc/neutron/dhcp_agent.ini
+
+[DEFAULT]
+...
+interface_driver = neutron.agent.linux.interface.BridgeInterfaceDriver
+dhcp_driver = neutron.agent.linux.dhcp.Dnsmasq
+enable_isolated_metadata = True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vi /etc/neutron/metadata_agent.ini
+
+
+[DEFAULT]
+...
+nova_metadata_ip = controller
+metadata_proxy_shared_secret = METADATA_SECRET
+
+
+
+
+
+vi /etc/nova/nova.conf
+
+
+[neutron]
+...
+url = http://controller:9696
+auth_url = http://controller:35357
+auth_type = password
+project_domain_name = default
+user_domain_name = default
+region_name = RegionOne
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+service_metadata_proxy = True
+metadata_proxy_shared_secret = METADATA_SECRET
+
+
+
+
+
+su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf \
+  --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+
+
+service nova-api restart
+
+
+service neutron-server restart
+service neutron-linuxbridge-agent restart
+service neutron-dhcp-agent restart
+service neutron-metadata-agent restart
+
+
+对于 networking 选项 2 ，也重启 L3 服务：
+
+service neutron-l3-agent restart
+
+
+
+
+
+
+
+
+
+
+
+
+在计算节点上
+
+apt-get install neutron-linuxbridge-agent -y
+
+
+
+vi /etc/neutron/neutron.conf
+
+
+注释掉 connection
+
+
+[DEFAULT]
+...
+rpc_backend = rabbit
+auth_strategy = keystone
+
+
+
+[oslo_messaging_rabbit]
+...
+rabbit_host = controller
+rabbit_userid = openstack
+rabbit_password = RABBIT_PASS
+
+
+[keystone_authtoken]
+...
+auth_uri = http://controller:5000
+auth_url = http://controller:35357
+memcached_servers = controller:11211
+auth_type = password
+project_domain_name = default
+user_domain_name = default
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+
+
+
+
+vi /etc/neutron/plugins/ml2/linuxbridge_agent.ini
+
+
+[linux_bridge]
+physical_interface_mappings = provider:eth1
+
+[vxlan]
+enable_vxlan = True
+local_ip = 10.0.0.31
+l2_population = True
+
+[securitygroup]
+...
+enable_security_group = True
+firewall_driver = neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+
+
+
+
+
+vi /etc/nova/nova.conf
+
+[neutron]
+...
+url = http://controller:9696
+auth_url = http://controller:35357
+auth_type = password
+project_domain_name = default
+user_domain_name = default
+region_name = RegionOne
+project_name = service
+username = neutron
+password = NEUTRON_PASS
+
+
+
+service nova-compute restart
+
+
+service neutron-linuxbridge-agent restart
+
+
+
+
+
+
+. admin-openrc
+
+neutron ext-list
+
+neutron agent-list
+
+
+
+
+
+
+apt-get install openstack-dashboard
+
+
+vi /etc/openstack-dashboard/local_settings.py
+
+OPENSTACK_HOST = "controller"
+
+ALLOWED_HOSTS = ['*', ]
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+
+CACHES = {
+    'default': {
+         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+         'LOCATION': 'controller:11211',
+    }
+}
+
+
+
+OPENSTACK_KEYSTONE_URL = "http://%s:5000/v3" % OPENSTACK_HOST
+
+
+OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True
+
+
+OPENSTACK_API_VERSIONS = {
+    "identity": 3,
+    "image": 2,
+    "volume": 2,
+}
+
+通过仪表盘创建用户时的默认域配置为 default :
+
+OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = "default"
+
+通过仪表盘创建的用户默认角色配置为 user ：
+
+OPENSTACK_KEYSTONE_DEFAULT_ROLE = "user"
+
+如果您选择网络参数1，禁用支持3层网络服务：
+
+OPENSTACK_NEUTRON_NETWORK = {
+    ...
+    'enable_router': False,
+    'enable_quotas': False,
+    'enable_distributed_router': False,
+    'enable_ha_router': False,
+    'enable_lb': False,
+    'enable_firewall': False,
+    'enable_vpn': False,
+    'enable_fip_topology_check': False,
+}
+
+
+TIME_ZONE = "TIME_ZONE"
+
+
+
+service apache2 reload
+
+
+
+
+

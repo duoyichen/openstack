@@ -1,0 +1,139 @@
+vi quota_list_cinder.sh
+i
+
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "+--|enabled"|cut -d " " -f 2`
+
+for i in $tenant_list
+do
+    tenant_names=`keystone tenant-list | grep $i | cut -d '|' -f 3`
+    echo "" >> quota_list_cinder.txt
+    echo "-------- ${tenant_names} --------" >> quota_list_cinder.txt
+    cinder quota-show $i | grep -E "gigabytes_capacity|gigabytes_performance" >> quota_list_cinder.txt
+done
+
+
+
+
+
+
+vi quota_list_nova.sh
+i
+
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "+--|enabled"|cut -d " " -f 2`
+
+for i in $tenant_list
+do
+    tenant_names=`keystone tenant-list | grep $i | cut -d '|' -f 3`
+    echo "" >> quota_list_nova.txt
+    echo "-------- ${tenant_names} --------" >> quota_list_nova.txt
+    nova quota-show --tenant $i | grep -E "instances|cores|ram" >> quota_list_nova.txt
+done
+
+
+
+
+
+
+vi quota_list_neutron.sh
+i
+
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "+--|enabled"|cut -d " " -f 2`
+
+for i in $tenant_list
+do
+    tenant_names=`keystone tenant-list | grep $i | cut -d '|' -f 3`
+    echo "" >> quota_list_neutron.txt
+    echo "-------- ${tenant_names} --------" >> quota_list_neutron.txt
+    neutron quota-show --tenant-id $i | grep "floatingip" >> quota_list_neutron.txt
+done
+
+
+
+
+
+
+
+
+
+vi quota_tenant.sh
+i
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|awk '/True/ {print $2}'`
+
+printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "资源池名称" "CPU核数" "云主机台数" "内存（G）" "性能型云盘（G）" "容量性云盘（G）" "公网IP数" >> quota_tenant.txt
+printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "----------------" "--------" "--------" "--------" "--------" "--------" "--------" >> quota_tenant.txt
+
+for i in ${tenant_list}
+do
+
+tenant_name=`keystone tenant-list|awk '/'"$i"'/ {print $4}'`
+
+tenant_quota_vms=`nova quota-show --tenant $i|awk '/instances/ {print $4}'`
+tenant_quota_cores0=`nova quota-show --tenant $i|awk '/cores/ {print $4}'`
+let tenant_quota_cores=tenant_quota_cores0/1024
+tenant_quota_rams=`nova quota-show --tenant $i|awk '/ram/ {print $4}'`
+
+tenant_quota_yunpan_rl_gbs=`cinder quota-show $i|awk '/gigabytes_capacity/ {print $4}'`
+tenant_quota_yunpan_xn_gbs=`cinder quota-show $i|awk '/gigabytes_performance/ {print $4}'`
+
+tenant_quota_ips=`neutron quota-show --tenant-id $i|awk '/floatingip/ {print $4}'`
+
+printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "${tenant_name}" "${tenant_quota_cores}" "${tenant_quota_vms}" "${tenant_quota_rams}" "${tenant_quota_yunpan_xn_gbs}" "${tenant_quota_yunpan_rl_gbs}" "${tenant_quota_ips}" >> quota_tenant.txt
+
+done
+
+
+
+
+
+
+
+
+
+tenant_name
+
+
+tenant_quota_vms
+tenant_quota_cores
+tenant_quota_rams
+
+tenant_quota_yunpan_xn_gbs
+tenant_quota_yunpan_rl_gbs
+
+tenant_quota_ips
+
+tenant_quota_date
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

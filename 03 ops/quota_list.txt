@@ -1,0 +1,16 @@
+cat quota_list.sh
+
+
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "+--|enabled"|cut -d " " -f 2`
+
+for i in $tenant_list
+do
+    tenant_name=`keystone tenant-list | grep 857af69d9b0547c8b2c8f4811eeaebbf | cut -d ' ' -f 4`
+    echo "---- $tenant_name ----" >> quota_list.txt
+    cinder quota-show $i >> quota_list.txt
+done

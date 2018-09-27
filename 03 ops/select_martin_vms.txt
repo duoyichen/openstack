@@ -1,0 +1,48 @@
+
+
+vi select_martin_vms.sh
+i
+
+
+#!/bin/bash
+
+source /root/martin
+
+vm_id=`nova list | grep -E "Running|Shutdown" | grep -Ev "2K3|W23_3|mxb|2003_64|cloudmind_mysql|cloudmind_web-bianyi" | cut -d '|' -f 2|cut -d ' ' -f 2`
+
+for i in $vm_id
+do
+    vm_name=`nova show $i | grep ' name '|cut -d '|' -f 3|cut -d ' ' -f 2`
+    flavor=`nova show $i | grep flavor|head -1|cut -d '|' -f 3| cut -d '(' -f 1`
+    date=`nova show $i | grep created|head -1|cut -d '|' -f 3|cut -d ' ' -f 2|cut -d 'T' -f 1`
+    
+    echo "" >> martin_vms.txt
+    echo "" >> martin_vms.txt
+    echo "-------- $vm_name --------" >> martin_vms.txt
+    echo "$flavor" >> martin_vms.txt
+    echo "$date" >> martin_vms.txt
+
+    disks=`cinder list --tenant Martin | grep $i | grep -v instance- | grep in-use|cut -d '|' -f 2 | cut -d ' ' -f 2`
+    disk_num=1
+    for j in $disks
+    do
+        disk_name=`cinder show $j | awk -F "|" '/display_name/ {print $3}'|awk '{print $1}'`
+        disk_type=`cinder show $j | awk -F "|" '/volume_type/ {print $3}'|awk '{print $1}'`
+        disk_size=`cinder show $j | awk -F "|" '/size/ {print $3}'|awk '{print $1}'`
+        disk_date=`cinder show $j | awk -F "|" '/created_at/ {print $3}'|awk '{print $1}'|cut -d 'T' -f 1`
+
+        echo "" >> martin_vms.txt
+        echo "DISK_$disk_num" >> martin_vms.txt
+        echo "DISK Name: $disk_name" >> martin_vms.txt
+        echo "$disk_type" >> martin_vms.txt
+        echo "${disk_size}GB" >> martin_vms.txt
+        echo "$disk_date" >> martin_vms.txt
+        let disk_num+=1
+    done
+done
+
+
+
+
+2K3|W23_3|mxb|2003_64|cloudmind_mysql|cloudmind_web-bianyi
+

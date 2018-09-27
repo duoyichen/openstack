@@ -1,0 +1,10 @@
+/opt/horizon/openstack_dashboard/local/local_settings.py
+
+
+
+
+
+MININUM_IOPS = 1200
+IOPS_PER_GB = 30
+MINI_VOLUME_SIZE = 10
+MAX_VOLUME_SIZE = 1000

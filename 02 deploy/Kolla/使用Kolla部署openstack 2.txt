@@ -1,0 +1,162 @@
+Kolla部署
+
+
+
+
+
+1．部署kolla的方式不限以下几种
+
+裸机部署
+使用heat
+使用vagrant
+这里，我们直接在OS上部署 Kolla 里面的docker镜像来搭建一个OpenStack开发测试环境，按照官网文档的系统配置如下（我使用的是一台虚拟机）：
+
+
+2 (or more) network interfaces
+At least 8gb main memory
+At least 40gb disk space
+2．安装 
+备注：最好，请在科学上网的环境下进行如下操作，你懂的。
+
+安装epel源
+
+# yum install -y epel-release  
+安装pip
+
+# yum install -y python-pip  
+下载kolla源码
+
+# git clone https://git.openstack.org/openstack/kolla  
+安装kolla
+
+# pip install kolla/   
+安装相关依赖包
+
+# yum install -y python-devel libffi-devel openssl-devel gcc 
+安装ansible，版本不要超过2.0.0
+
+# pip install -U ansible==1.9.4  
+安装docker
+
+# curl -sSL https://get.docker.io | bash  
+安装tox
+
+# pip install -U tox
+安装openstackclient
+
+# pip install -U python-openstackclient
+生成kolla-build.conf
+
+# tox -egenconfig  
+拷贝配置文件到/etc目录下
+
+# cp -rv etc/kolla /etc/
+下面，开始构建docker image和ansible执行部署。 
+构建docker images（时间会较长）
+
+# kolla-build --base centos --type source 
+Build 完成之后，查看所有已经 build 好的镜像。
+
+# docker images
+修改全局配置文件
+
+# vim /etc/kolla/globals.yml 
+    kolla_install_type: "source"
+    kolla_internal_address: "10.10.10.213"
+    network_interface: "eth0"
+    neutron_external_interface: "eth1"
+一键安装
+
+# kolla-ansible deploy   
+OpenStack部署成功后，在部署节点运行下面的命令创建一个openrc文件/etc/ kolla/admin-openrc.sh。或查看tools/openrc-example。
+
+# kolla-ansible post-deploy 
+之后，创建一个openrc文件，用于初始化一个glance image和neutron环境。
+
+# source /etc/kolla/admin-openrc.sh
+# kolla/tools/init-runonce
+如果是multinode，还需要依赖docker-registry。如何构建docker私有仓库，可以参考如下链接：
+
+http://docs.openstack.org/developer/kolla/quickstart.html 
+http://dockerpool.com/static/books/docker_practice/repository/local_repo.html
+
+三．Kolla使用
+1.OpenStack Docker Images
+
+本地Build Image，因为远程的pull image 速度太慢 而且 Kolla 社区不是每个commit修改都把image build一遍，所以本地build image是开发最好的选择。推荐使用source方式build。
+
+Docker images： 
+https://hub.docker.com/u/kollaglue/ 
+image building guide： 
+http://docs.openstack.org/developer/kolla/image-building.html 
+Docker Hub： 
+https://docs.docker.com/engine/userguide/containers/dockerimages/
+
+2. 相关技巧
+
+tools/cleanup-containers：可用于从系统中移除部署的容器
+tools/cleanup-host：可用于移除由于残余网络变化引发的docker启动的neutron-agents主机
+tools/cleanup-images：可用于从本地缓存中移除所有的docker image
+3.查询OpenStack docker image 
+使用docker ps 可以查看对应openstack 所有服务的容器。当前Kolla项目在Kollaglue repo提供了以下服务的docker镜像。
+
+# docker search kollaglue
+NAME                                   DESCRIPTION   STARS     OFFICIAL   AUTOMATED
+kollaglue/centos-rdo-keystone                        2                    
+kollaglue/centos-rdo-base                            1                    
+kollaglue/fedora-rdo-nova-compute                    0                    
+kollaglue/fedora-rdo-nova-api                        0                    
+kollaglue/centos-rdo-rabbitmq                        0                    
+kollaglue/centos-rdo-horizon                         0                    
+kollaglue/fedora-rdo-mariadb                         0                    
+kollaglue/fedora-rdo-nova-network                    0                    
+kollaglue/fedora-rdo-nova-conductor                  0                    
+kollaglue/centos-rdo-nova-base                       0                    
+kollaglue/fedora-rdo-base                            0                    
+kollaglue/fedora-rdo-nova-scheduler                  0                    
+kollaglue/centos-rdo-nova-network                    0                    
+kollaglue/centos-rdo-nova-compute                    0                    
+kollaglue/fedora-rdo-zaqar                           0                    
+kollaglue/centos-rdo-mariadb-app                     0                    
+kollaglue/fedora-rdo-glance-registry                 0                    
+kollaglue/fedora-rdo-nova-base                       0                    
+kollaglue/fedora-rdo-glance-api                      0                    
+kollaglue/centos-rdo-glance-base                     0                    
+kollaglue/fedora-rdo-nova-libvirt                    0                    
+kollaglue/centos-rdo-neutron-base                    0                    
+kollaglue/fedora-rdo-rabbitmq                        0                    
+kollaglue/centos-rdo-nova-libvirt                    0                    
+kollaglue/fedora-rdo-keystone                        0   
+4.Kolla代码目录结构
+
+ansible - Contains Ansible playbooks to deploy Kolla in Docker containers.
+demos - Contains a few demos to use with Kolla.
+dev/heat - Contains an OpenStack-Heat based development environment.
+dev/vagrant - Contains a vagrant VirtualBox/Libvirt based development environment.
+doc - Contains documentation.
+etc - Contains a reference etc directory structure which requires configuration of a small number of configuration variables to achieve a working All-in-One (AIO) deployment.
+docker - Contains jinja2 templates for the docker build system.
+tools - Contains tools for interacting with Kolla.
+specs - Contains the Kolla communities key arguments about architectural shifts in the code base.
+tests - Contains functional testing tools.
+5. Debugging Kolla 
+可以通过执行的部署目标来确定容器的状态：
+
+# docker ps –a
+通过日志来进行检查：
+
+# docker exec -it heka bash
+所有的容器都可以从这个目录中获取服务日志：/var/log/kolla/SERVICE_NAME。Docker使用heka来展现收集到的日志信息。
+
+如果需要输出日志，请运行：
+
+# docker logs <container-name>
+请注意，大多数容器不会stdout，上面的命令将不会提供信息。
+
+6.参考资源 
+Kolla wiKI：https://wiki.openstack.org/wiki/Kolla 
+Docs：http://docs.openstack.org/developer/kolla/
+
+作者简介：
+
+徐超。专注于工作和研究基于OpenStack产品研发测试过程的持续集成、持续测试和持续部署/交付领域，曾参与创建国内一OpenStack服务提供商从0到1+的测试体系。

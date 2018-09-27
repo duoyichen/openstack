@@ -1,0 +1,231 @@
+
+
+vi Create_Project_noDomain.sh
+i
+
+
+
+#!/bin/sh
+
+username="username"
+
+echo ""
+printf "Please input \33[;31mUserName:\33[0m(default is "${username}"):\n"
+read -t 60 username_input
+if [ "$username_input" != "" ]
+then
+username=${username_input}
+fi
+
+domain_name="${username}"
+tenant_name="${username}"
+tenant_description="${username}'s description"
+password="${username}@2016CloudMind"
+
+email="${username}@test.com"
+echo ""
+printf "Please input \33[;31mEmail:\33[0m(default is "${email}"):\n"
+read -t 60 email_input
+if [ "$email_input" != "" ]
+then
+email=${email_input}
+fi
+
+mobile="13111111111"
+echo ""
+printf "Please input \33[;31mMobile No.:\33[0m(default is "${mobile}"):\n"
+read -t 60 mobile_input
+if [ "$mobile_input" != "" ]
+then
+mobile=${mobile_input}
+fi
+
+
+source /root/openrc
+
+keystone tenant-create --name ${tenant_name} --description "${tenant_description}" --enabled true
+keystone user-create --name ${username} --tenant ${tenant_name} --pass ${password} --email ${email} --tel ${mobile}
+
+
+user_rc_dir="/root/o/user_rc/"
+
+echo ""
+printf "Please input \33[;31mUser's rc file directory:\33[0m(default is "${user_rc_dir}"):\n"
+read user_rc_dir_input
+if [ "$user_rc_dir_input" != "" ]
+then
+user_rc_dir=$user_rc_dir_input
+fi
+
+if [ ! -d ${user_rc_dir} ];
+  then
+    echo "Destination Directory not exist, Make it";
+    mkdir -p ${user_rc_dir};
+else
+  echo "Destination Directory is OK";
+fi
+
+user_rc_filename="${username}rc"
+user_rc_file="${user_rc_dir}${user_rc_filename}"
+
+(
+cat <<eof
+#!/bin/sh
+export LC_ALL=C
+export OS_NO_CACHE='true'
+export OS_TENANT_NAME="${tenant_name}"
+export OS_USERNAME="${username}"
+export OS_PASSWORD="${password}"
+export OS_AUTH_URL='http://123.58.254.6:5000/v2.0/'
+export OS_AUTH_STRATEGY='keystone'
+export OS_REGION_NAME='RegionOne'
+export CINDER_ENDPOINT_TYPE='publicURL'
+export GLANCE_ENDPOINT_TYPE='publicURL'
+export KEYSTONE_ENDPOINT_TYPE='publicURL'
+export NOVA_ENDPOINT_TYPE='publicURL'
+export NEUTRON_ENDPOINT_TYPE='publicURL'
+eof
+) >> ${user_rc_file}
+
+
+source ${user_rc_file}
+
+neutron net-create switch-${tenant_name}
+neutron subnet-create switch-${tenant_name} --name subnet-${tenant_name} \
+--gateway 10.1.1.1 10.1.1.0/24 \
+--dns-nameserver 8.8.4.4 \
+--dns-nameserver 1.2.4.8 \
+--dns-nameserver 114.114.114.114
+neutron router-create router-${tenant_name}
+neutron router-interface-add router-${tenant_name} subnet-${tenant_name}
+neutron router-gateway-set router-${tenant_name} net04_ext
+
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule default tcp 3389 3389 0.0.0.0/0
+
+
+
+
+
+
+
+
+
+
+
+
+
+vi insert_domain.sh
+
+#!/bin/sh
+
+domain_name="domain_name7"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e \
+"use keystone;insert into domain(id,name,enabled,extra) \
+values('"${domain_name}"','"${domain_name}"','"1"','{\"description\": \""${domain_name}"\'s description\"}');"
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;insert into domain(id,name,enabled,extra) values('"${domain_name}"','"${domain_name}"','"1"','"{description:${domain_name}sdescription}"');"
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;insert into domain(id,name,enabled,extra) values("${domain_name}","${domain_name}","1","{description:${domain_name}sdescription}");"
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;insert into domain(id,name,enabled,extra) values("${domain_name}","${domain_name}","1","{description:${domain_name}sdescription}");"
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;select * from domain;"
+
+
+
+
+
+vi update_project.sh
+
+
+
+#!/bin/sh
+
+tenant_name="jifei"
+domain_name="domain_name7"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e \
+"use keystone;update project set domain_id = '"${domain_name}"' where name = '"${tenant_name}"';"
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;select * from domain;"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use boss;select * from  account;"
+Warning: Using a password on the command line interface can be insecure.
++----+----------------------------------+---------------------+----------------------------------+---------------+---------------+-----------------------+---------+----------------+----------+---------------+-----------------+-----------------+--------+---------+---------------------+-------------+-------------+----------+--------------+---------+-----------------+---------------+----------------+-------+-------------+
+| id | user_id                          | user_name           | tenant_id                        | customer_name | customer_type | email                 | idcards | contact_people | position | mobile_number | fixed_telephone | mailing_address | region | zipCode | add_time            | update_time | delete_time | isDelete | isActivation | remarks | account_balance | activate_code | vatInvoiceInfo | level | domain_name |
++----+----------------------------------+---------------------+----------------------------------+---------------+---------------+-----------------------+---------+----------------+----------+---------------+-----------------+-----------------+--------+---------+---------------------+-------------+-------------+----------+--------------+---------+-----------------+---------------+----------------+-------+-------------+
+|  2 | 3d121c1b09a845c88d5f3a8d8b7924c2 | Martin@cloudmind.cn | aa855355d3414d5cb6346f0ca601fa95 | NULL          |             0 | Martin@cloudmind.cn   |         |                |          | 18600023215   |                 |                 |        |         | 2016-08-24 15:29:06 | NULL        | NULL        |        0 |            0 | NULL    |       9450.7628 |               | {}             |     0 | NULL        |
+|  5 | 5c872e1d9bd8433b8da4d396266ff617 | maxiaobo            | 81f340f863fc4864b7199044682705aa | NULL          |             0 | 24190444@qq.com       |         |                |          | 18611782128   |                 |                 |        |         | 2016-08-24 16:25:34 | NULL        | NULL        |        0 |            0 | NULL    |      10000.0000 |               | {}             |     0 | maxiaobo    |
+| 11 | 18f8fab46dce4387b044681dbeeaac94 | Domain1Admin        | 093ff422d9fc4d9ca18c18a94d0d2f7e | NULL          |             0 | Domain1Admin@test.com |         |                |          | 13111111111   |                 |                 |        |         | 2016-08-24 16:46:09 | NULL        | NULL        |        0 |            0 | NULL    |       2027.1169 |               | {}             |     0 | Domain1     |
+| 14 | ab20d58155914e568b15d78e73c483f1 | admin_dom           | cea7c985390b4dfcafceb2f50f051280 | NULL          |             0 | domi@cloudmind.cn     |         |                |          | 13988888888   |                 |                 |        |         | 2016-08-24 16:53:38 | NULL        | NULL        |        0 |            0 | NULL    |      10000.0000 |               | {}             |     0 | Domain      |
++----+----------------------------------+---------------------+----------------------------------+---------------+---------------+-----------------------+---------+----------------+----------+---------------+-----------------+-----------------+--------+---------+---------------------+-------------+-------------+----------+--------------+---------+-----------------+---------------+----------------+-------+-------------+
+
+
+
+insert into links(name,address) values('jerichen','gdsz');
+
+
+insert into links(name,address) values('jerichen','gdsz');
+
+insert into account(id,user_id,user_name,tenant_id,customer_name,customer_type,email,idcards,contact_people,position,mobile_number,fixed_telephone,mailing_address,region,zipCode,add_time,update_time,delete_time,isDelete,isActivation,remarks,account_balance,activate_code,vatInvoiceInfo,level,domain_name) values('1','c351845dc657411abc42bea704be5228','admin','b124b65f6e804d00852c69d01304b6d9','','0','admin@test.com','','','','13111111111','','','','','2016-08-28 16:53:38','2016-08-28 16:53:38','2016-08-28 16:53:38','0','0','NULL','999999.0000','','','0','Default');
+
+
+
+
+update account set tenant_id = 'b124b65f6e804d00852c69d01304b6d9,74092cf94caf4079854e4c75fd5aff8c' where tenant_id ='b124b65f6e804d00852c69d01304b6d9';
+
+update account set tenant_id ='74092cf94caf4079854e4c75fd5aff8c' where tenant_id = 'b124b65f6e804d00852c69d01304b6d9,74092cf94caf4079854e4c75fd5aff8c';
+
+update account set user_id = '2e98a7b9d0d7464da06bb36eb7e28fcf',user_name ='chenying' where user_name = 'admin';
+
+
+update account set domain_name = 'Default' where domain_name = 'default';
+
+
+
+
+vi select_mysql.sh
+i
+
+#!/bin/bash
+
+for i in `mysql -e "use neutron;show tables;"|grep -vE '+--|Tables_in_neutron|ml2_vlan_allocations|ml2_vxlan_allocations'`;
+do
+    echo "------ $i ------" >> neutron.sql; 
+    mysql -e "use neutron;select * from $i;" >> neutron.sql;
+done
+
+
+
+------ ipallocations ------
+port_id 				ip_address      subnet_id       			network_id
+01dee959-c408-4e49-9446-71331170fbfd    192.168.111.3   41b498a0-4901-4851-af53-05ff2efbdb85    7be7a0a8-5806-4850-9163-9f366751bc78
+4573747f-6758-4e4f-ae5e-e899af10eade    10.1.1.2        96cb694b-ecae-4f44-bda2-2c51fafc9aa4    6f7cd987-5736-4fbe-8314-6a2d7a27d310
+60c731db-7946-49cd-86bd-e8a55f0a9e6a    123.58.254.27   f4b5555e-0c8c-49c1-b352-b7a44b955b1b    616eb111-e92f-4a47-92e7-a69d99b74148
+794f8439-7fcb-42fa-b32d-d30bab70ebc2    123.58.254.29   f4b5555e-0c8c-49c1-b352-b7a44b955b1b    616eb111-e92f-4a47-92e7-a69d99b74148
+8de0a5e5-47d7-45ce-870a-d9e88b17eae3    192.168.111.1   41b498a0-4901-4851-af53-05ff2efbdb85    7be7a0a8-5806-4850-9163-9f366751bc78
+a5f7dddb-ed45-4059-8623-8dc90b6eabdd    10.1.1.1        96cb694b-ecae-4f44-bda2-2c51fafc9aa4    6f7cd987-5736-4fbe-8314-6a2d7a27d310
+adca8161-4d79-4d2f-9b64-5d40d76f1fdc    192.168.111.2   41b498a0-4901-4851-af53-05ff2efbdb85    7be7a0a8-5806-4850-9163-9f366751bc78
+c1efd7fb-7b22-4a24-87a9-8b17b057a679    123.58.254.28   f4b5555e-0c8c-49c1-b352-b7a44b955b1b    616eb111-e92f-4a47-92e7-a69d99b74148
+c3e89827-a189-41cf-98fd-f33a109e7ac9    10.1.1.3        96cb694b-ecae-4f44-bda2-2c51fafc9aa4    6f7cd987-5736-4fbe-8314-6a2d7a27d310
+
+
+
+

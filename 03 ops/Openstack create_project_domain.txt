@@ -1,0 +1,555 @@
+
+
+vim create_project_domain.sh
+i
+
+
+
+
+#!/bin/sh
+
+
+user_name="user_name"
+
+echo ""
+printf "Please input \33[;31mUserName:\33[0m(default is "${user_name}"):"
+read -t 60 user_name_input
+if [ "$user_name_input" != "" ]
+then
+user_name=${user_name_input}
+fi
+
+domain_name="${user_name}"
+tenant_name="${user_name}"
+tenant_description="${user_name}'s description"
+password="${user_name}@2016CloudMind"
+
+email="${user_name}@test.com"
+echo ""
+printf "Please input \33[;31mEmail:\33[0m(default is "${email}"):"
+read -t 60 email_input
+if [ "$email_input" != "" ]
+then
+email=${email_input}
+fi
+
+mobile="13111111111"
+echo ""
+printf "Please input \33[;31mMobile No.:\33[0m(default is "${mobile}"):"
+read -t 60 mobile_input
+if [ "$mobile_input" != "" ]
+then
+mobile=${mobile_input}
+fi
+
+mysqlcli="mysql -e"
+echo ""
+printf "Please input \33[;31mMySQL root user's password,and press [Enter] for no:\33[0m(default is "${mysql_root_pass}"):"
+read -t 60 mysql_root_pass_input
+if [ "${mysql_root_pass_input}" != "" ]
+then
+mysql_root_pass=${mysql_root_pass_input}
+mysqlcli="mysql -uroot -p${mysql_root_pass} -e"
+fi
+
+
+${mysqlcli} \
+"use keystone;insert into domain(id,name,enabled,extra) \
+values('"${domain_name}"','"${domain_name}"','"1"','{\"description\": \""${domain_name}"\'s description\"}');"
+if [ $? == 0 ]
+then
+  echo "Create ${domain_name} Successful!";
+else
+  echo "Create ${domain_name} Failed!";
+fi
+
+
+source /root/openrc
+
+keystone tenant-create --name ${tenant_name} --description "${tenant_description}" --enabled true
+keystone user-create --name ${user_name} --tenant ${tenant_name} --pass ${password} --email ${email} --tel ${mobile}
+
+${mysqlcli} \
+"use keystone;update project set domain_id = '"${domain_name}"' where name = '"${tenant_name}"';"
+
+if [ $? == 0 ]
+then
+  echo "Add ${tenant_name} to ${domain_name} Successful!";
+else
+  echo "Add ${tenant_name} to ${domain_name} Failed!";
+fi
+
+${mysqlcli} \
+"use keystone;update user set domain_id = '"${domain_name}"' where name = '"${user_name}"';"
+if [ $? == 0 ]
+then
+  echo "Add ${user_name} to ${domain_name} Successful!";
+else
+  echo "Add ${user_name} to ${domain_name} Failed!";
+fi
+
+
+user_rc_dir="/root/o/user_rc/"
+
+echo ""
+printf "Please input \33[;31mUser's rc file directory:\33[0m(default is "${user_rc_dir}"):"
+read user_rc_dir_input
+if [ "$user_rc_dir_input" != "" ]
+then
+user_rc_dir=$user_rc_dir_input
+fi
+
+if [ ! -d ${user_rc_dir} ];
+  then
+    echo "Destination Directory not exist, Make it";
+    mkdir -p ${user_rc_dir};
+else
+  echo "Destination Directory is OK";
+fi
+
+user_rc_filename="${user_name}rc"
+user_rc_file="${user_rc_dir}${user_rc_filename}"
+
+(
+cat <<eof
+#!/bin/sh
+export LC_ALL=C
+export OS_NO_CACHE='true'
+export OS_PROJECT_DOMAIN_NAME="${domain_name}"
+export OS_TENANT_DOMAIN_NAME="${domain_name}"
+export OS_USER_DOMAIN_NAME="${domain_name}"
+export OS_TENANT_NAME="${tenant_name}"
+export OS_USERNAME="${user_name}"
+export OS_PASSWORD="${password}"
+export OS_AUTH_URL='http://192.168.10.2:5000/v2.0/'
+export OS_AUTH_STRATEGY='keystone'
+export OS_REGION_NAME='RegionOne'
+export CINDER_ENDPOINT_TYPE='publicURL'
+export GLANCE_ENDPOINT_TYPE='publicURL'
+export KEYSTONE_ENDPOINT_TYPE='publicURL'
+export NOVA_ENDPOINT_TYPE='publicURL'
+export NEUTRON_ENDPOINT_TYPE='publicURL'
+eof
+) >> ${user_rc_file}
+
+
+#source /root/openrc
+#tenant_id=`keystone tenant-list|grep ${tenant_name}|cut -d ' ' -f 2`
+tenant_id=`${mysqlcli} "use keystone;select * from project;"|grep ${tenant_name}|cut -f 1`
+
+neutron net-create --tenant-id ${tenant_id} switch-${tenant_name}
+neutron subnet-create  --tenant-id ${tenant_id} switch-${tenant_name} --name subnet-${tenant_name} \
+--gateway 10.1.1.1 10.1.1.0/24 \
+--dns-nameserver 8.8.4.4 \
+--dns-nameserver 1.2.4.8 \
+--dns-nameserver 114.114.114.114
+neutron router-create --tenant-id ${tenant_id} router-${tenant_name}
+neutron router-interface-add router-${tenant_name} subnet-${tenant_name}
+neutron router-gateway-set router-${tenant_name} net04_ext
+
+
+#source ${user_rc_file}
+securitygroup_id=`${mysqlcli} "use neutron;select * from securitygroups;"|grep ${tenant_id}|cut -f 2`
+
+nova secgroup-add-rule ${securitygroup_id} icmp -1 -1 0.0.0.0/0
+nova secgroup-add-rule ${securitygroup_id} tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule ${securitygroup_id} tcp 3389 3389 0.0.0.0/0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vi insert_domain.sh
+
+#!/bin/sh
+
+domain_name="domain_name7"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e \
+"use keystone;insert into domain(id,name,enabled,extra) \
+values('"${domain_name}"','"${domain_name}"','"1"','{\"description\": \""${domain_name}"\'s description\"}');"
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;insert into domain(id,name,enabled,extra) values('"${domain_name}"','"${domain_name}"','"1"','"{description:${domain_name}sdescription}"');"
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;insert into domain(id,name,enabled,extra) values("${domain_name}","${domain_name}","1","{description:${domain_name}sdescription}");"
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;insert into domain(id,name,enabled,extra) values("${domain_name}","${domain_name}","1","{description:${domain_name}sdescription}");"
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;select * from domain;"
+
+
+
+
+
+vi update_project.sh
+
+
+
+#!/bin/sh
+
+tenant_name="jifei"
+domain_name="domain_name7"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e \
+"use keystone;update project set domain_id = '"${domain_name}"' where name = '"${tenant_name}"';"
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use keystone;select * from domain;select * from project;"
+
+
+mysql -e "use keystone;select * from domain;select * from project;"
+
+
+
+
+
+
+
+
+
+
+
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use boss;select * from  account;"
+Warning: Using a password on the command line interface can be insecure.
++----+----------------------------------+---------------------+----------------------------------+---------------+---------------+-----------------------+---------+----------------+----------+---------------+-----------------+-----------------+--------+---------+---------------------+-------------+-------------+----------+--------------+---------+-----------------+---------------+----------------+-------+-------------+
+| id | user_id                          | user_name           | tenant_id                        | customer_name | customer_type | email                 | idcards | contact_people | position | mobile_number | fixed_telephone | mailing_address | region | zipCode | add_time            | update_time | delete_time | isDelete | isActivation | remarks | account_balance | activate_code | vatInvoiceInfo | level | domain_name |
++----+----------------------------------+---------------------+----------------------------------+---------------+---------------+-----------------------+---------+----------------+----------+---------------+-----------------+-----------------+--------+---------+---------------------+-------------+-------------+----------+--------------+---------+-----------------+---------------+----------------+-------+-------------+
+|  2 | 3d121c1b09a845c88d5f3a8d8b7924c2 | Martin@cloudmind.cn | aa855355d3414d5cb6346f0ca601fa95 | NULL          |             0 | Martin@cloudmind.cn   |         |                |          | 18600023215   |                 |                 |        |         | 2016-08-24 15:29:06 | NULL        | NULL        |        0 |            0 | NULL    |       9450.7628 |               | {}             |     0 | NULL        |
+|  5 | 5c872e1d9bd8433b8da4d396266ff617 | maxiaobo            | 81f340f863fc4864b7199044682705aa | NULL          |             0 | 24190444@qq.com       |         |                |          | 18611782128   |                 |                 |        |         | 2016-08-24 16:25:34 | NULL        | NULL        |        0 |            0 | NULL    |      10000.0000 |               | {}             |     0 | maxiaobo    |
+| 11 | 18f8fab46dce4387b044681dbeeaac94 | Domain1Admin        | 093ff422d9fc4d9ca18c18a94d0d2f7e | NULL          |             0 | Domain1Admin@test.com |         |                |          | 13111111111   |                 |                 |        |         | 2016-08-24 16:46:09 | NULL        | NULL        |        0 |            0 | NULL    |       2027.1169 |               | {}             |     0 | Domain1     |
+| 14 | ab20d58155914e568b15d78e73c483f1 | admin_dom           | cea7c985390b4dfcafceb2f50f051280 | NULL          |             0 | domi@cloudmind.cn     |         |                |          | 13988888888   |                 |                 |        |         | 2016-08-24 16:53:38 | NULL        | NULL        |        0 |            0 | NULL    |      10000.0000 |               | {}             |     0 | Domain      |
++----+----------------------------------+---------------------+----------------------------------+---------------+---------------+-----------------------+---------+----------------+----------+---------------+-----------------+-----------------+--------+---------+---------------------+-------------+-------------+----------+--------------+---------+-----------------+---------------+----------------+-------+-------------+
+
+
+
+insert into links(name,address) values('jerichen','gdsz');
+
+
+insert into links(name,address) values('jerichen','gdsz');
+
+insert into account(id,user_id,user_name,tenant_id,customer_name,customer_type,email,idcards,contact_people,position,mobile_number,fixed_telephone,mailing_address,region,zipCode,add_time,update_time,delete_time,isDelete,isActivation,remarks,account_balance,activate_code,vatInvoiceInfo,level,domain_name) values('1','c351845dc657411abc42bea704be5228','admin','b124b65f6e804d00852c69d01304b6d9','','0','admin@test.com','','','','13111111111','','','','','2016-08-28 16:53:38','2016-08-28 16:53:38','2016-08-28 16:53:38','0','0','NULL','999999.0000','','','0','Default');
+
+
+
+
+update account set tenant_id = 'b124b65f6e804d00852c69d01304b6d9,74092cf94caf4079854e4c75fd5aff8c' where tenant_id ='b124b65f6e804d00852c69d01304b6d9';
+
+update account set tenant_id ='74092cf94caf4079854e4c75fd5aff8c' where tenant_id = 'b124b65f6e804d00852c69d01304b6d9,74092cf94caf4079854e4c75fd5aff8c';
+
+update account set user_id = '2e98a7b9d0d7464da06bb36eb7e28fcf',user_name ='chenying' where user_name = 'admin';
+
+
+update account set domain_name = 'Default' where domain_name = 'default';
+
+
+
+
+
+
+for i in `mysql -e "use neutron;show tables;"|grep -vE "'+--'|'Tables_in_neutron'"`;
+do
+    echo "------ $i ------" >> neutron.sql; 
+    mysql -e "use neutron;select * from $i;" >> neutron.sql;
+done
+
+
+
+------ ipallocations ------
+port_id 				ip_address      subnet_id       			network_id
+01dee959-c408-4e49-9446-71331170fbfd    192.168.111.3   41b498a0-4901-4851-af53-05ff2efbdb85    7be7a0a8-5806-4850-9163-9f366751bc78
+4573747f-6758-4e4f-ae5e-e899af10eade    10.1.1.2        96cb694b-ecae-4f44-bda2-2c51fafc9aa4    6f7cd987-5736-4fbe-8314-6a2d7a27d310
+60c731db-7946-49cd-86bd-e8a55f0a9e6a    123.58.254.27   f4b5555e-0c8c-49c1-b352-b7a44b955b1b    616eb111-e92f-4a47-92e7-a69d99b74148
+794f8439-7fcb-42fa-b32d-d30bab70ebc2    123.58.254.29   f4b5555e-0c8c-49c1-b352-b7a44b955b1b    616eb111-e92f-4a47-92e7-a69d99b74148
+8de0a5e5-47d7-45ce-870a-d9e88b17eae3    192.168.111.1   41b498a0-4901-4851-af53-05ff2efbdb85    7be7a0a8-5806-4850-9163-9f366751bc78
+a5f7dddb-ed45-4059-8623-8dc90b6eabdd    10.1.1.1        96cb694b-ecae-4f44-bda2-2c51fafc9aa4    6f7cd987-5736-4fbe-8314-6a2d7a27d310
+adca8161-4d79-4d2f-9b64-5d40d76f1fdc    192.168.111.2   41b498a0-4901-4851-af53-05ff2efbdb85    7be7a0a8-5806-4850-9163-9f366751bc78
+c1efd7fb-7b22-4a24-87a9-8b17b057a679    123.58.254.28   f4b5555e-0c8c-49c1-b352-b7a44b955b1b    616eb111-e92f-4a47-92e7-a69d99b74148
+c3e89827-a189-41cf-98fd-f33a109e7ac9    10.1.1.3        96cb694b-ecae-4f44-bda2-2c51fafc9aa4    6f7cd987-5736-4fbe-8314-6a2d7a27d310
+
+
+
+
+
+
+
+
+
+
+
+
++----------------------------------+-------------------+-------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------+---------+-----------+----------------------------------+
+| id                               | name              | extra                                                 | password                                                                                                                | enabled | domain_id | default_project_id               |
++----------------------------------+-------------------+-------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------+---------+-----------+----------------------------------+
+| 339821625e804495b3e7e4e5d239eb77 | heat              | {"tel": null, "email": "heat@localhost"}              | $6$rounds=40000$tJ8nczaxw5Rddfpb$6tIJqUCQ1YzywoVFa8kUqga.uHnGQeXAuZpjR7a2VgpJPWJSq5ysOvc/PNLUlPti5v6Vnc0864SdwSSjT01GW1 |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| 4d945f75003246b5abd15514a734497e | tmp_neutron_admin | {"tel": null, "email": null}                          | $6$rounds=40000$mAw0cAWyWcLU9uPF$W01RJY1i4QqL1wR0QZkhouchddphY1uTCHXuyVMpR5J1dosuEXM0Vd5KgzcbKxKwDwCB/J9EkNL9Xi60oFr4j1 |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| 77abf3052f0f4d6f88f2ee4c45bf553e | user2             | {"tel": "13111111111", "email": "user2@test.com"}     | $6$rounds=40000$9oKIdY3XiGQqLSg8$81X/TPXQmmhAE0AOI2QCY0i46RMk.AXEuVb6o.YcyikY7.b.h3HuZA0GaLo8E0Ek0sBvfHaoJEuH6dikDHoeZ1 |       1 | default   | 726dea12f7de4b368acc3e9e43f1c4f2 |
+| 8f4d751c2d6c47159f74dca221d1edf2 | admin             | {"tel": null, "email": "admin@localhost"}             | $6$rounds=40000$97yGj3US2XRw9xSE$0J.ZCBfcHltvSz4E8CF.skK6OYI4LyjTDDRKo3eJPtAwfP.EyxovF71lVCiaWV8011F5Zk/glxjvwn4nVWtNv. |       1 | default   | 06546fb1149841948520d507a2eef67f |
+| a80227f737244c6a984639bd0b2c51ea | swift             | {"tel": null, "email": "swift@localhost"}             | $6$rounds=40000$BUNh//siB/oDOIM0$RhMLRMQJAPVV7n.M/jk99PzKh7LFH93GoVMeb/n6d6x4Dym9XduOxX0dk9uWTT41fxJM1fUpjmT1DgAgJLQ141 |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| b1307a111fab40889e9cff05742a8025 | glance            | {"tel": null, "email": "glance@localhost"}            | $6$rounds=40000$3Jy221e4cSCIdDQ5$GhQLhhyeR9yd7FKC9VwaVAzmc1LVKDm5MnNEh5yn5LhyvzicLTWWU36EaXHODeDXtMUyu.gzrKrfU38pU7S5K/ |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| b34e524cac09446682f720dbe8e0cdae | user8             | {"tel": "13111111111", "email": "user8@test.com"}     | $6$rounds=40000$tF1rNgCr5dGDvG6g$S3TT.D7LfzrbBsejWtDuXxXdmmOFpAg.TuP1iZTpudMfU4r2JjQro33N0FloffztD6pgk5FZMxP7tF.63aMRb1 |       1 | default   | ff926007343149d28a185c556aa8c13b |
+| bdb0184e7bae40128edb57fd2a0b06a2 | cinder            | {"tel": null, "email": "cinder@localhost"}            | $6$rounds=40000$LvKAgbissDtPFNZ1$QZyK4v0ccbizrelG0QrAUe8DNF6ucqIPj95ZitxJ8hYQL.y78XOWbZoSJDMJL.Q76xes2qnvgtftUtV.duBMR. |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| c9f5b565ba3b4f20ba3040b57381622b | duoyichen         | {"tel": "13111111111", "email": "duoyichen@test.com"} | $6$rounds=40000$.UWssjqY7pkdC8c1$3Y.WrrdfxdWC9feFHHt.C78JLUBvhRzEH0/PWS9ovqXw6R3xSo2vsyjhm33O13f3BmU4kUBOeHtv06YtmVqY1/ |       1 | default   | 84c260f455714b8ea66efd6e45438461 |
+| dd1a0fcaf48d47c39c4c960b4f0fbcf2 | ceilometer        | {"tel": null, "email": "ceilometer@localhost"}        | $6$rounds=40000$T06wKV30vD7z3LFI$g92wYg88vTlnRV5hj6eVhZ6nPndThBiPbmKB1/r2Tw773Nuq58hdO0zeVT6ZeZ9YYeXguOGgriLtrSt//9MRK0 |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| e0186dd7b5c945cb86b6c0aca0d85e03 | neutron           | {"tel": null, "email": "neutron@localhost"}           | $6$rounds=40000$imxmFczOVgrnZQP2$Vrwuvg.Ltp2dULpvclT0mkHIzbSQu8dz77VUJUXWsxXNnubOp3mpYoEUcLgdVkwFcXYtI.MzS3sbs.3IhHLAR. |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| ebd65bb2a56547b7a644006c5141dd98 | heat-cfn          | {"tel": null, "email": "heat-cfn@localhost"}          | $6$rounds=40000$giw6qQLRCT9R4g/F$/RpDnGmJXpSLaoeja7rXqA8eKBj/FclEQfR3EaqVQUQpsPl0.HGl2l62XxB2ja2VvxONskFBDZyUQBQC0qwit0 |       1 | default   | 56774649dbb543ec9c86789888772f9d |
+| f71d6334ef6c49bdaa5b09efbea6aacb | nova              | {"tel": null, "email": "nova@localhost"}              | $6$rounds=40000$TXRc/uFF.ZQVjNX9$cRgSugcvsCw9IswN4ZV.9hJaT.22CnYe93K11SkVY2X/6laLT/2O8KoHFbKSEaPNek6VNF8ay5wjxWS/lhLN.1 |       1 | default   | 56774649dbb543ec9c86789888772f9d |
++----------------------------------+-------------------+-------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------+---------+-----------+----------------------------------+
+
+
+
+
+
+
+select * from security_groups;
++---------------------+------------+------------+----+---------+-------------+----------------------------------+----------------------------------+---------+
+| created_at          | updated_at | deleted_at | id | name    | description | user_id                          | project_id                       | deleted |
++---------------------+------------+------------+----+---------+-------------+----------------------------------+----------------------------------+---------+
+| 2016-08-28 17:42:23 | NULL       | NULL       |  1 | default | default     | c9f5b565ba3b4f20ba3040b57381622b | 84c260f455714b8ea66efd6e45438461 |       0 |
+| 2016-08-29 16:53:53 | NULL       | NULL       |  2 | default | default     | 2c4bcd7661b44245916c088de8f1b098 | e5845f3665534ee58c96d534ad637d8e |       0 |
++---------------------+------------+------------+----+---------+-------------+----------------------------------+----------------------------------+---------+
+
+
+
+
+tenant_id=`mysql -e "use nova;select * from security_groups;"|grep ${tenant_name}|cut -f 1`
+
+mysql -e "use neutron;select * from securitygroups;"|grep ${tenant_name}|cut -f 1
+
+e5845f3665534ee58c96d534ad637d8e
+securitygroups
+
+
+
+
+
+
+
+
+
+
+
+
+
+
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+| tenant_id                        | id                                   | security_group_id                    | remote_group_id                      | direction | ethertype | protocol | port_range_min | port_range_max | remote_ip_prefix |
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+| e5845f3665534ee58c96d534ad637d8e | 15403396-6f90-4ee7-9a48-b75af0784f2b | c7e300a2-f7cc-477e-9de0-8cca3660e056 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 1d5127d6-694b-4401-bf8a-f4e292c1043e | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | 24f4b304-7fed-420f-b197-9ca7ac5020e0 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | 286fc414-498f-4f9f-8aa5-a53dc8d94d72 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 347eb7ae-85db-4054-90fd-7a722b0127e0 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 409f50c5-a1c0-4ff5-82aa-a21ebeca49fb | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 4301c1a2-c71a-432c-8713-818d132bade1 | e1479aa6-ff96-40de-abcc-47e48b65e1c2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 4428d716-80f2-4643-a37c-6a75a3bfbfe7 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 4783ae3b-2364-4bd8-82e9-5e951aef48ee | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 4df62c0e-3c5c-4e38-8471-7f5c8be66a75 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 553a7012-a5d0-4b6f-9c47-29560d3ee830 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | tcp      |           3389 |           3389 | 0.0.0.0/0        |
+| 06546fb1149841948520d507a2eef67f | 62a2ffcd-379e-40df-a12a-33b39dc31990 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 65dcb0dc-ccb8-40b0-89b7-334f5c77fdee | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 66a46b6d-8fbd-45c0-8cea-18067d55f172 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 67acd009-b697-4106-bb8e-a850c34055aa | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | icmp     |           NULL |           NULL | 0.0.0.0/0        |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 6e067b16-c087-4761-83f5-c724d124e4dc | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 7065db90-47b9-41f4-b939-118f900d2524 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 72162621-5404-4600-8c96-cf625ea0ab8c | d59c088a-f930-4f45-8b85-51c8a086edd1 | d59c088a-f930-4f45-8b85-51c8a086edd1 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | 7939ba71-00ec-4ef0-9cd4-7b6a0b8657a9 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 797fcbb3-e65c-44b2-9bd1-cd5ce9415701 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 80ee4255-fae1-4406-8c27-88f9429d562f | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 84a9e19e-9d49-42b7-9359-a3721fcfbf17 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | ae7095ba-fe38-4406-aae8-d9ba754fbb8c | e1479aa6-ff96-40de-abcc-47e48b65e1c2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | b32991fe-5535-49f1-aded-a0962ee1d9e4 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | tcp      |             22 |             22 | 0.0.0.0/0        |
+| 06546fb1149841948520d507a2eef67f | b5459b49-16f5-4f84-947d-f363dedbd3e3 | d59c088a-f930-4f45-8b85-51c8a086edd1 | d59c088a-f930-4f45-8b85-51c8a086edd1 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | b5c408d3-c4f0-4f68-a21e-481ddddc86a0 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | c1bcbc4f-212a-4bab-98fe-28ef7baf16a1 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | d2e6b1cf-edef-4c30-9b6b-af20fd9d3b4c | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | e3113f1d-c520-4151-8305-81c9e406952e | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | e9f1fcd6-8937-48a4-9980-efc40570927e | c7e300a2-f7cc-477e-9de0-8cca3660e056 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | ee9f0eb9-9f7e-4460-b862-b9f61a8686e5 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | f153d847-717e-49e6-8dd9-9e1707fff037 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | f78ea12a-0990-44ef-a9f6-e330fc0b568b | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+
+
+
+
+
+
+
+
+
+
+
+
+for i in `mysql -e "use neutron;show tables;"|grep security`;do mysql -e "use neutron;select * from $i;";done
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+| tenant_id                        | id                                   | security_group_id                    | remote_group_id                      | direction | ethertype | protocol | port_range_min | port_range_max | remote_ip_prefix |
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+| e5845f3665534ee58c96d534ad637d8e | 15403396-6f90-4ee7-9a48-b75af0784f2b | c7e300a2-f7cc-477e-9de0-8cca3660e056 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 1a0636d5-f6d3-4502-b769-de0de8168378 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | ingress   | IPv4      | tcp      |          23389 |          23389 | 0.0.0.0/0        |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 1d5127d6-694b-4401-bf8a-f4e292c1043e | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | 24f4b304-7fed-420f-b197-9ca7ac5020e0 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | 286fc414-498f-4f9f-8aa5-a53dc8d94d72 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 347eb7ae-85db-4054-90fd-7a722b0127e0 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 409f50c5-a1c0-4ff5-82aa-a21ebeca49fb | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 4428d716-80f2-4643-a37c-6a75a3bfbfe7 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 4783ae3b-2364-4bd8-82e9-5e951aef48ee | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 4df62c0e-3c5c-4e38-8471-7f5c8be66a75 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 553a7012-a5d0-4b6f-9c47-29560d3ee830 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | tcp      |           3389 |           3389 | 0.0.0.0/0        |
+| 06546fb1149841948520d507a2eef67f | 62a2ffcd-379e-40df-a12a-33b39dc31990 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 65dcb0dc-ccb8-40b0-89b7-334f5c77fdee | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 66a46b6d-8fbd-45c0-8cea-18067d55f172 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 67acd009-b697-4106-bb8e-a850c34055aa | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | icmp     |           NULL |           NULL | 0.0.0.0/0        |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 6e067b16-c087-4761-83f5-c724d124e4dc | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 7065db90-47b9-41f4-b939-118f900d2524 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | 7939ba71-00ec-4ef0-9cd4-7b6a0b8657a9 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 797fcbb3-e65c-44b2-9bd1-cd5ce9415701 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 80ee4255-fae1-4406-8c27-88f9429d562f | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 84a9e19e-9d49-42b7-9359-a3721fcfbf17 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | b32991fe-5535-49f1-aded-a0962ee1d9e4 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | tcp      |             22 |             22 | 0.0.0.0/0        |
+| 2fd54225f11b477ab0345d17a6719041 | b5c408d3-c4f0-4f68-a21e-481ddddc86a0 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | c1bcbc4f-212a-4bab-98fe-28ef7baf16a1 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | d2e6b1cf-edef-4c30-9b6b-af20fd9d3b4c | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | e3113f1d-c520-4151-8305-81c9e406952e | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | e9f1fcd6-8937-48a4-9980-efc40570927e | c7e300a2-f7cc-477e-9de0-8cca3660e056 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | ee9f0eb9-9f7e-4460-b862-b9f61a8686e5 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | f153d847-717e-49e6-8dd9-9e1707fff037 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | f78ea12a-0990-44ef-a9f6-e330fc0b568b | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+
+
+
+
+
+
+
+
+
+[root@node-96 o]# for i in `mysql -e "use neutron;show tables;"|grep security`;do echo -e "\n\n---------------- $i ---------------\n\n";mysql -e "use neutron;select * from $i;";done
+
+
+---------------- securitygroupportbindings ---------------
+
+
+
+
+---------------- securitygrouprules ---------------
+
+
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+| tenant_id                        | id                                   | security_group_id                    | remote_group_id                      | direction | ethertype | protocol | port_range_min | port_range_max | remote_ip_prefix |
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+| 9ce1edca067847c1826c4f9982aa678c | 053b8e4a-d727-436a-97f3-92f5c739d40b | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | 15403396-6f90-4ee7-9a48-b75af0784f2b | c7e300a2-f7cc-477e-9de0-8cca3660e056 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 1a0636d5-f6d3-4502-b769-de0de8168378 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | ingress   | IPv4      | tcp      |          23389 |          23389 | 0.0.0.0/0        |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 1d5127d6-694b-4401-bf8a-f4e292c1043e | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 23482d9e-eb18-4fba-b340-a1e8072895a4 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | NULL                                 | ingress   | IPv4      | tcp      |          13389 |          13389 | 0.0.0.0/0        |
+| e5845f3665534ee58c96d534ad637d8e | 24f4b304-7fed-420f-b197-9ca7ac5020e0 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | 286fc414-498f-4f9f-8aa5-a53dc8d94d72 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 347eb7ae-85db-4054-90fd-7a722b0127e0 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 409f50c5-a1c0-4ff5-82aa-a21ebeca49fb | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 4428d716-80f2-4643-a37c-6a75a3bfbfe7 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 4783ae3b-2364-4bd8-82e9-5e951aef48ee | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 36e0030904fb41ae9469e97d400cbba2 | 48fb0d17-6071-4a86-8176-c48aa76a4498 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 4c4c064c-df81-42e3-bf80-8b8affa445bf | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | NULL                                 | ingress   | IPv4      | icmp     |           NULL |           NULL | 0.0.0.0/0        |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 4df62c0e-3c5c-4e38-8471-7f5c8be66a75 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 4f673c6e-06f7-45fd-a8c9-e9b1e1eb5d67 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | NULL                                 | ingress   | IPv4      | icmp     |           NULL |           NULL | 0.0.0.0/0        |
+| 06546fb1149841948520d507a2eef67f | 553a7012-a5d0-4b6f-9c47-29560d3ee830 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | tcp      |           3389 |           3389 | 0.0.0.0/0        |
+| 06546fb1149841948520d507a2eef67f | 60a9d5e9-e6fa-488f-bb5a-a1c083c84190 | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | NULL                                 | ingress   | IPv4      | tcp      |             22 |             22 | 0.0.0.0/0        |
+| 06546fb1149841948520d507a2eef67f | 62a2ffcd-379e-40df-a12a-33b39dc31990 | d59c088a-f930-4f45-8b85-51c8a086edd1 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 65dcb0dc-ccb8-40b0-89b7-334f5c77fdee | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 84c260f455714b8ea66efd6e45438461 | 66a46b6d-8fbd-45c0-8cea-18067d55f172 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | 67acd009-b697-4106-bb8e-a850c34055aa | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | icmp     |           NULL |           NULL | 0.0.0.0/0        |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 6e067b16-c087-4761-83f5-c724d124e4dc | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 7065db90-47b9-41f4-b939-118f900d2524 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 36e0030904fb41ae9469e97d400cbba2 | 70a52731-a310-4a17-9c8e-cfde3f3e12b9 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | 7939ba71-00ec-4ef0-9cd4-7b6a0b8657a9 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | c7e300a2-f7cc-477e-9de0-8cca3660e056 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 797fcbb3-e65c-44b2-9bd1-cd5ce9415701 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 80ee4255-fae1-4406-8c27-88f9429d562f | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 9ce1edca067847c1826c4f9982aa678c | 81de011a-65e7-4a54-9bf1-e34e04e4f0da | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 2fd54225f11b477ab0345d17a6719041 | 84a9e19e-9d49-42b7-9359-a3721fcfbf17 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 9ce1edca067847c1826c4f9982aa678c | 9bae304b-9431-4463-ae49-669ff9ca686f | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 36e0030904fb41ae9469e97d400cbba2 | a4b9e22a-83a8-4275-ab4b-cda26889708e | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 9ce1edca067847c1826c4f9982aa678c | a93c4b5c-8ddc-48eb-927d-b3fbac619470 | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | b32991fe-5535-49f1-aded-a0962ee1d9e4 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | ingress   | IPv4      | tcp      |             22 |             22 | 0.0.0.0/0        |
+| 2fd54225f11b477ab0345d17a6719041 | b5c408d3-c4f0-4f68-a21e-481ddddc86a0 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 06546fb1149841948520d507a2eef67f | b5f2e27b-773a-42f9-ba4d-6117256fbc47 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | NULL                                 | ingress   | IPv4      | tcp      |             22 |             22 | 0.0.0.0/0        |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | c1bcbc4f-212a-4bab-98fe-28ef7baf16a1 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | d2e6b1cf-edef-4c30-9b6b-af20fd9d3b4c | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 36e0030904fb41ae9469e97d400cbba2 | e2273e8d-0341-4803-a89c-7b2eb3662bdd | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | ingress   | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | e3113f1d-c520-4151-8305-81c9e406952e | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| e5845f3665534ee58c96d534ad637d8e | e9f1fcd6-8937-48a4-9980-efc40570927e | c7e300a2-f7cc-477e-9de0-8cca3660e056 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | ee9f0eb9-9f7e-4460-b862-b9f61a8686e5 | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | NULL                                 | egress    | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | f153d847-717e-49e6-8dd9-9e1707fff037 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | ingress   | IPv6      | NULL     |           NULL |           NULL | NULL             |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | f78ea12a-0990-44ef-a9f6-e330fc0b568b | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | NULL                                 | egress    | IPv4      | NULL     |           NULL |           NULL | NULL             |
++----------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+-----------+-----------+----------+----------------+----------------+------------------+
+
+
+---------------- securitygroups ---------------
+
+
++----------------------------------+--------------------------------------+---------+-------------+
+| tenant_id                        | id                                   | name    | description |
++----------------------------------+--------------------------------------+---------+-------------+
+| 2fd54225f11b477ab0345d17a6719041 | 017d2ae2-9ea5-44e2-ad63-9dc172e22f13 | default | default     |
+| 36e0030904fb41ae9469e97d400cbba2 | 07d554ca-b267-4bc3-bac7-d995c9ba2a23 | default | default     |
+| 6ae0d4f98be84fe2862fb60e37bc8068 | 300038c5-c9b9-4590-b89c-4fd8f9a996d2 | default | default     |
+| 84c260f455714b8ea66efd6e45438461 | 3bbf88ef-c01c-4e0a-9103-d635a2d4f2d2 | default | default     |
+| 726dea12f7de4b368acc3e9e43f1c4f2 | 4a383baa-65ca-4ef5-9f1c-5bae0d8465da | default | default     |
+| 9ce1edca067847c1826c4f9982aa678c | 7b298492-0f21-4078-b0fd-cf5ba4ef3822 | default | default     |
+| 9dbeaac0e5a14f7494d1ab4d2977e58c | 8931b48f-5d4d-4363-bd5c-ece9d5d31e84 | default | default     |
+| e5845f3665534ee58c96d534ad637d8e | c7e300a2-f7cc-477e-9de0-8cca3660e056 | default | default     |
+| 06546fb1149841948520d507a2eef67f | d59c088a-f930-4f45-8b85-51c8a086edd1 | default | default     |
++----------------------------------+--------------------------------------+---------+-------------+
+
+
+
+
+
+
+
+
+
+
+for i in `mysql -e "use nova;show tables;"|grep shadow_`;do echo -e "\n\n---------------- $i ---------------\n\n";mysql -e "use nova;select * from $i;";done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

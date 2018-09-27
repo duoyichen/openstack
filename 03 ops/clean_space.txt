@@ -1,0 +1,111 @@
+
+
+vim /etc/mail.rc
+
+set from=duoyichen@163.com
+set smtp=smtp.163.com
+set smtp-auth-user=duoyichen
+set smtp-auth-password=12345678
+set smtp-auth=login
+
+service postfix restart
+
+
+
+
+通过 postfix 发送邮件配置
+
+
+
+
+vim /etc/mail.rc 在最后添加如下几行：
+
+set from=alarm@duoyichen.cn
+set smtp=210.14.142.15
+set smtp-auth-user=alarm@duoyichen.cn
+set smtp-auth-password===--00pp
+set smtp-auth=login
+
+重启服务：
+
+service postfix restart
+
+
+
+
+
+vi  /etc/postfix/main.cf
+
+发现配置为：
+
+inet_interfaces = localhost
+inet_protocols = all
+
+改成：
+
+inet_interfaces = all
+inet_protocols = all
+
+
+
+
+测试：
+
+echo "Hello world" | mail -a /root/install.log -s "Test mail" duoyichen@qq.com
+
+
+
+
+
+
+vi clean_space.sh
+i
+
+#!/bin/bash
+
+#yum -y install mailx
+
+#rmdir=/tmp
+rmdir=/var/spool/rsyslog/
+mail_list="martin@duoyichen.cn chenying@duoyichen.cn duoyichen@qq.com"
+sleep_minutes=3
+use_ratio=`df -k / | grep -v Available | awk '{print $5}' | awk -F% '{print $1}'`
+use_space_rsyslog=`du -ms $rmdir|grep "$rmdir"|cut -d '/' -f 1`
+threshold_ratio=50
+threshold_rsyslog=102400
+
+echo "$rmdir,$use_ratio,$use_space_rsyslog,$threshold_ratio,$threshold_rsyslog"
+
+if [ $use_ratio -gt $threshold_ratio ] && [ $use_space_rsyslog -gt $threshold_rsyslog ];then
+    #echo "Disk used $use_ratio and The $rmdir Directory is ${use_space_rsyslog}M large, We must clean it!"|\
+#mail -s "Disk Space has used $use_ratio" -c $mail_list
+    df -Th|mail -s "Disk used ${use_ratio}%, We will Clean it after ${sleep_minutes} Minutes" -c $mail_list
+    sleep ${sleep_minutes}m
+    cd $rmdir && find . -mtime +1 -type f|grep mainmsgqueue|xargs rm -rf && df -Th|mail -s "Disk Space Clean Successful!" -c $mail_list
+fi
+
+
+
+
+
+25 17 * * * root /root/o/clean_space.sh > /dev/null
+
+
+OpenStack云平台定时任务_Node-52_清理磁盘
+30 16 * * * root /root/o/clean_space.sh
+每天下午4:30 检查，当 / 目录空间使用超过 55% 或者 /var/spool/rsyslog/ 大于100G的时候，就删除/var/spool/rsyslog/ 目录下的 1天前的 mainmsgqueue* 文件 
+
+
+
+vi dd.sh
+i
+
+#/bin/bash
+
+for i in `seq 1 13`
+do
+dd if=/dev/zero of=/tmp/mainmsgqueue.000$i bs=1024K count=1024
+done
+
+
+

@@ -1,0 +1,8 @@
+cat select_mysql.sh 
+#!/bin/bash
+
+for i in `mysql -e "use neutron;show tables;"|grep -vE '+--|Tables_in_neutron|ml2_vlan_allocations|ml2_vxlan_allocations'`;
+do
+    echo "------ $i ------" >> neutron.sql; 
+    mysql -e "use neutron;select * from $i;" >> neutron.sql;
+done

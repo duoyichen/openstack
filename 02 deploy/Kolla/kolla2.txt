@@ -1,0 +1,317 @@
+2018@CloudMind#CN
+
+
+
+
+echo "nameserver 202.106.0.20" > /etc/resolv.conf
+echo "nameserver 144.114.114.114" >> /etc/resolv.conf
+echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+
+
+
+systemctl disable NetworkManager
+systemctl stop NetworkManager
+
+systemctl stop firewalld
+systemctl disable firewalld
+
+sed -i '/^SELINUX=.*/c SELINUX=disabled' /etc/selinux/config
+sed -i 's/^SELINUXTYPE=.*/SELINUXTYPE=disabled/g' /etc/selinux/config
+
+grep --color=auto '^SELINUX' /etc/selinux/config
+setenforce 0
+
+echo "10.1.1.181    kolla" >> /etc/hosts
+
+
+yum install -y vim wget screen curl
+
+yum install epel-release -y
+yum install axel vim git curl wget lrzsz gcc  python-devel python-pip -y
+
+
+wget -O /etc/yum.repos.d/docker-ce.repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+
+yum install -y docker-ce
+
+
+
+mkdir /etc/systemd/system/docker.service.d
+
+tee /etc/systemd/system/docker.service.d/kolla.conf << 'EOF'
+[Service]
+MountFlags=shared
+EOF
+
+vim /usr/lib/systemd/system/docker.service
+# ExecStart=/usr/bin/dockerd
+ExecStart=/usr/bin/dockerd --registry-mirror=http://f2d6cb40.m.daocloud.io --storage-driver=overlay2
+
+systemctl daemon-reload
+
+systemctl restart docker
+
+systemctl enable docker
+
+systemctl status docker
+
+docker info
+
+
+
+yum -y install ansible
+
+
+
+
+
+git clone https://github.com/openstack/kolla-ansible -b stable/queens
+
+cd kolla-ansible/
+
+cp -r etc/kolla/ /etc/kolla/
+
+pip install . -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+
+
+
+egrep "^[^#]" /etc/kolla/globals.yml
+---
+kolla_base_distro: "centos"
+kolla_install_type: "source"
+openstack_release: "queens"
+kolla_internal_vip_address: "192.168.254.11"
+docker_namespace: "kolla"
+network_interface: "ens33"
+neutron_external_interface: "ens34"
+enable_haproxy: "no"
+nova_compute_virt_type: "qemu"
+ironic_dnsmasq_dhcp_range:
+tempest_image_id:
+tempest_flavor_ref_id:
+tempest_public_network_id:
+tempest_floating_network_name:
+
+
+
+
+
+kolla-genpwd
+
+编辑 /etc/kolla/passwords.yml 文件，配置 keystone 管理员用户的密码。
+
+keystone_admin_password: password
+
+
+kolla-ansible prechecks
+
+kolla-ansible pull
+
+大约1小时
+
+
+
+kolla-ansible deploy
+
+
+kolla-ansible post-deploy
+
+
+pip install python-openstackclient
+
+
+
+编辑init-runonce文件,设置public network
+
+# vim /usr/share/kolla-ansible/init-runonce
+
+EXT_NET_CIDR='175.25.181.128/25'
+EXT_NET_RANGE='start=175.25.181.188,end=175.25.181.199'
+EXT_NET_GATEWAY='175.25.181.129'
+
+
+
+source /etc/kolla/admin-openrc.sh
+
+cd /usr/share/kolla-ansible/ && ./init-runonce
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+curl -sSL https://get.docker.io | bash //注:这条命令安装的是最新版的docker，会默认下载docker源
+# 或者选择yum安装方式:
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+yum install -y docker-engine
+mkdir -p /etc/systemd/system/docker.service.d
+tee /etc/systemd/system/docker.service.d/kolla.conf <<-'EOF'
+[Service]
+MountFlags=shared
+#EnvironmentFile=/etc/sysconfig/docker
+ExecStart=
+ExecStart=/usr/bin/dockerd --insecure-registry 0.0.0.0/0
+EOF
+systemctl daemon-reload
+systemctl restart docker
+systemctl enable docker.service
+
+
+
+
+
+
+
+
+
+
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+yum install docker-engine-1.12.5 docker-engine-selinux-1.12.5 -y
+
+
+
+
+
+
+yum install epel-release -y
+yum install python-pip -y
+pip install -U pip
+
+
+yum install python-devel libffi-devel gcc openssl-devel libselinux-python -y
+
+yum install ansible -y
+
+
+/etc/ansible/ansible.cfg:
+
+[defaults]
+host_key_checking=False
+pipelining=True
+forks=100
+
+
+
+
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+
+
+
+
+
+enable_cinder: "no"
+enable_haproxy: "no"
+
+
+
+
+
+
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+
+
+vi /etc/sysconfig/docker
+
+INSECURE_REGISTRY="--insecure-registry 192.168.122.21:5000"
+
+
+
+kolla-ansible -i /root/all-in-one bootstrap-servers
+
+kolla-ansible -i /root/all-in-one prechecks
+
+kolla-ansible -i /root/all-in-one deploy
+
+
+
+kolla-ansible destroy -i /root/all-in-one --yes-i-really-really-mean-it
+
+
+
+kolla-ansible deploy -i /root/all-in-one --yes-i-really-really-mean-it
+
+
+
+
+
+
+
+yum install -y tree net-tools bind-utils tree sysstat vim-en* \
+lrzsz NetworkManager-tui ntp ntpdate iftop tcpdump telnet traceroute python-devel \
+libffi-devel gcc openssl-devel git python-setuptools
+
+
+
+
+
+
+
+Network timed out while trying to connect to  kolla centos-binary-openvswitch-vswitchd 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

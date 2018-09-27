@@ -1,0 +1,19 @@
+
+#!/bin/bash
+
+rmdir=/var/spool/rsyslog/
+mail_list="martin@cloudmind.cn chenying@cloudmind.cn duoyichen@qq.com"
+sleep_minutes=5
+use_ratio=`df -k / | grep -v Available | awk '{print $5}' | awk -F% '{print $1}'`
+use_space_rsyslog=`du -ms $rmdir|grep "$rmdir"|cut -d '/' -f 1`
+threshold_ratio=50
+threshold_rsyslog=102400
+HOSTNAMES=`echo "$HOSTNAME"|cut -d '.' -f 1`
+
+#echo "$rmdir,$use_ratio,$use_space_rsyslog,$threshold_ratio,$threshold_rsyslog" >> /root/o/Test_Clean_1
+
+if [ $use_ratio -gt $threshold_ratio ] || [ $use_space_rsyslog -gt $threshold_rsyslog ];then
+    df -Th|mail -s "${HOSTNAMES} 's Disk used ${use_ratio}%, We will Clean it after ${sleep_minutes} Minutes" -c $mail_list
+    sleep ${sleep_minutes}m
+    cd $rmdir && find . -mtime +1 -type f|grep mainmsgqueue|xargs rm -rf && df -Th|mail -s "${HOSTNAMES} 's Disk Clean Successful!" -c $mail_list
+fi

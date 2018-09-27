@@ -1,0 +1,287 @@
+
+
+
+vi create_glance.sh
+i
+
+#!/bin/sh
+
+image_name=CentOS-6.6-x86_64
+image_path=/root/images
+image_file_name=centos6.6_x64_20G.qcow2
+image_file=${image_path}/${image_file_name}
+image_name_cinder=${image_name}-cinder
+#http_mirrors_epel="http://epel.mirror.net.in/epel/6/x86_64/epel-release-6-8.noarch.rpm"
+http_mirrors_epel="http://mirrors.ustc.edu.cn/epel/6/x86_64/epel-release-6-8.noarch.rpm"
+#http_mirrors_epel="http://mirrors.aliyun.com/epel/6/x86_64/epel-release-6-8.noarch.rpm"
+remove_epel=1
+
+if [ -d ${image_path} ] ;then
+    echo "${image_path} is ok"
+else
+    echo "${image_path} not exist, make it ..."
+    mkdir -p ${image_path}
+fi
+
+
+is_yum=0
+counter=0
+
+while [ "${is_yum}" == "0" ] && [ "${counter}" != "5" ]
+do
+    rpm -q epel-release
+    if [ "$?" == "0" ];then
+        is_yum=1
+        continue
+        echo -e "\n\033[32mepel-release-6-8.noarch has been installed already!\033[0m\n"
+    else
+        yum install -y ${http_mirrors_epel}
+        if [ "$?" == "0" ];then
+            is_yum=1
+            echo -e "\n\033[32mInstall epel-release-6-8.noarch Successful!\033[0m\n"
+            remove_epel=0
+        else
+            let counter+=1
+        fi
+
+    fi
+done
+
+
+is_yum=0
+counter=0
+
+while [ "${is_yum}" == "0" ] && [ "${counter}" != "5" ]
+do
+    rpms="sshpass"
+    yum clean all
+    yum install -y ${rpms}
+    is_yum=1
+    let counter+=1
+
+    for i in ${rpms}
+    do
+        rpm -q $i
+        if [ "$?" == "0" ];then
+            echo -e "\n\033[32m$i has installed already!\033[0m\n"
+        else
+            echo -e "\n\033[32m$i is not installed yet!\033[0m\n"
+            is_yum=0
+            break
+        fi
+    done
+done
+
+if [ ${remove_epel} == 0 ];then
+    rpm -e `rpm -q epel-release`
+fi
+
+
+if [ -f ${image_file} ] ;then
+    echo "${image_file} is ok";
+else
+    echo "${image_file} not exist, get it ..."
+    sshpass -p r00tme scp -o StrictHostKeyChecking=no -P 22 10.20.0.2:/root/${image_file_name} ${image_path}
+fi
+
+source /root/openrc
+
+glance image-create --name ${image_name} --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=centos \
+--property os_version=6.6 \
+--property vol_size=50 \
+--file ${image_file}
+
+cinder create --image-id $(nova image-list|grep ${image_name}|cut -d " " -f 2) --display-name ${image_name_cinder} 50
+cinder metadata $(cinder list|grep ${image_name_cinder}|cut -d ' ' -f 2)  set awcloud_public_image=yes
+
+
+
+
+
+
+
+
+
+
+vi create_glance.sh
+i
+
+#!/bin/sh
+
+image_name=Windows7Ux64SP1
+image_path=/root/images
+image_file_name=Windows7Ux64SP1.qcow2
+image_file=${image_path}/${image_file_name}
+image_name_cinder=${image_name}-cinder
+
+source /root/openrc
+
+glance image-create --name ${image_name} --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=windows \
+--property os_version=2003 \
+--property vol_size=50 \
+--file ${image_file}
+
+cinder create --image-id $(nova image-list|grep ${image_name}|cut -d " " -f 2) --display-name ${image_name_cinder} 50
+cinder metadata $(cinder list|grep ${image_name_cinder}|cut -d ' ' -f 2)  set awcloud_public_image=yes
+
+
+
+
+
+
+
+
+
+
+
+
+
+glance image-create --name CentOS65 --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=centos \
+--property os_version=6.5 \
+--property vol_size=24 \
+--file centos6.5_64_24G-template.qcow2
+
+
+
+glance image-create --name Windows7Ux64SP1 --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=windows \
+--property os_version=7 \
+--property vol_size=50 \
+--file /root/images/Windows7Ux64SP1.qcow2
+
+
+
+
+
+
+
+glance image-create --name Windows2003x64 --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=windows \
+--property os_version=2003 \
+--property vol_size=50 \
+--file /root/images/win2003_data64_50G-template
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+source /root/openrc
+
+glance image-create --name Redhat-6.5_x86_64 --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=rhel \
+--property os_version=6 \
+--property vol_size=50 \
+--file /root/images/Redhat-6.5_x86_64.qcow2
+
+
+
+
+cinder create --image-id 06bf72eb-c032-4778-ac97-33b32ff1003b --display-name  Fedora-Cloud-Base-23  50
+
+
+cinder list 查看刚刚的创建的 ID
+
+
+cinder metadata 刚刚上传的ID  set awcloud_public_image=yes   
+
+
+
+
+
+cinder create --image-id $(nova image-list | awk '/ Redhat-6.5_x86_64 / {print $2}') --display-name Redhat-6.5_x86_64 50
+
+
+
+cinder metadata $(cinder list | awk '/ Redhat-6.5_x86_64 / {print $2}')  set awcloud_public_image=yes 
+
+
+
+nova image-list | awk '/ Redhat-6.5_x86_64 / {print $2}'
+
+
+
+
+
+
+实例：
+
+source /root/openrc
+
+glance image-create --name centos6.6_x64 --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=rhel \
+--property os_version=6 \
+--property vol_size=50 \
+--file /root/images/centos6.6_x64_20G.qcow2
+
+
+cinder create --image-id $(nova image-list | awk '/ centos6.6_x64 / {print $2}') --display-name centos6.6_x64 50
+
+cinder metadata $(cinder list | awk '/ centos6.6_x64 / {print $2}')  set awcloud_public_image=yes 
+
+nova image-list | awk '/ centos6.6_x64 / {print $2}'
+
+
+
+
+
+
+
+
+
+实例：
+
+source /root/openrc
+
+glance image-create --name centos6.6_x64 --is-public true \
+--container-format=bare --disk-format=qcow2 --min-ram=1024 \
+--property architecture=x86_64 \
+--property os_distro=rhel \
+--property os_version=6 \
+--property vol_size=50 \
+--file /root/images/centos6.6_x64_20G.qcow2
+
+
+cinder create --image-id $(nova image-list | awk '/ Windows2003x64 / {print $2}') --display-name Windows2003x64_cinder 50
+
+cinder metadata $(cinder list | awk '/ Windows2003x64_cinder / {print $2}')  set awcloud_public_image=yes 
+
+
+
+nova image-list | awk '/ Windows2003x64_cinder / {print $2}'
+
+
+
+

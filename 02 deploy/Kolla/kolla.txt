@@ -1,0 +1,283 @@
+
+
+
+iptables -t nat -I PREROUTING -p tcp --dport 80 -j DNAT --to 192.168.122.21:80
+iptables -t nat -I POSTROUTING -p tcp --dport 80 -j MASQUERADE
+
+
+
+
+qemu-img create -f qcow2 /osimage/CentOS-7.4-x86_64-Mini-50G.qcow2 50G
+
+
+virt-install --name C74 --vcpus 4 --ram 4096 \
+--cdrom /osimage/CentOS-7-x86_64-Minimal-1708.iso \
+--disk path=/osimage/os/CentOS-7.4-x86_64-Mini_50G_C74_12221.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=virbr0,model=virtio \
+--network bridge=br1,model=virtio \
+--network bridge=br0,model=virtio \
+--vnc --vncport=5911 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel7
+
+
+virt-clone -o C74 -n C74_12221 -f /osimage/os/CentOS-7.4-x86_64-Mini_50G_C74_12222.qcow2 
+
+
+
+virt-install --name ps1 --vcpus=2 --ram 4196 \
+--disk path=/osimage/CentOS-7.2-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=virbr0,model=virtio \
+--network bridge=br0,model=virtio \
+--vnc --vncport=5901 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel7 --boot hd
+
+
+
+virt-install --name W2012 --vcpus=2 --ram 4196 \
+--disk path=/osimage/public/Windows2012R2.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=virbr0,model=virtio \
+--network bridge=br1,model=virtio \
+--network bridge=br0,model=virtio \
+--vnc --vncport=5901 --vnclisten=0.0.0.0 -v \
+--os-type=windows --os-variant=win2k8 --boot hd
+
+
+
+
+virt-install --name=W2012 --vcpus=2 --ram=4196 \
+--disk path=/osimage/public/Windows2012R2.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=virbr0,model=virio \
+--network bridge=br1,model=virtio \
+--network bridge=br0,model=virtio \
+--vnc --vncport=5903 --vnclisten=0.0.0.0 \
+--os-type=windows --os-variant=win2k8 --boot=hd
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 << eof
+DEVICE=eth0
+TYPE=Ethernet
+BOOTPROTO=static
+ONBOOT=yes
+IPADDR=192.168.122.21
+NETMASK=255.255.255.0
+GATEWAY=192.168.122.1
+eof
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eth1 << eof
+DEVICE=eth1
+TYPE=Ethernet
+BOOTPROTO=static
+ONBOOT=yes
+IPADDR=10.1.1.21
+NETMASK=255.255.255.0
+eof
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eth2 << eof
+DEVICE=eth2
+TYPE=Ethernet
+BOOTPROTO=static
+ONBOOT=yes
+eof
+
+
+echo "nameserver 202.106.0.20" > /etc/resolv.conf
+echo "nameserver 144.114.114.114" >> /etc/resolv.conf
+echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+
+systemctl disable NetworkManager
+systemctl stop NetworkManager
+
+systemctl stop firewalld
+systemctl disable firewalld
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+
+sed -i '/^SELINUX=.*/c SELINUX=disabled' /etc/selinux/config
+sed -i 's/^SELINUXTYPE=.*/SELINUXTYPE=disabled/g' /etc/selinux/config
+
+grep --color=auto '^SELINUX' /etc/selinux/config
+setenforce 0
+
+echo "192.168.122.21    node1 node1.duoyichen.io" >> /etc/hosts
+echo "192.168.122.22    node1 node2.duoyichen.io" >> /etc/hosts
+echo "192.168.122.23    node1 node3.duoyichen.io" >> /etc/hosts
+echo "192.168.122.24    node1 node4.duoyichen.io" >> /etc/hosts
+
+
+ssh-keygen
+
+ssh-copy-id 192.168.122.21
+
+yum install -y vim wget screen curl
+
+
+
+
+yum install epel-release -y
+
+
+
+
+
+
+
+curl -sSL https://get.docker.io | bash //注:这条命令安装的是最新版的docker，会默认下载docker源
+# 或者选择yum安装方式:
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+yum install -y docker-engine
+mkdir -p /etc/systemd/system/docker.service.d
+tee /etc/systemd/system/docker.service.d/kolla.conf <<-'EOF'
+[Service]
+MountFlags=shared
+#EnvironmentFile=/etc/sysconfig/docker
+ExecStart=
+ExecStart=/usr/bin/dockerd --insecure-registry 0.0.0.0/0
+EOF
+systemctl daemon-reload
+systemctl restart docker
+systemctl enable docker.service
+
+
+
+
+
+
+
+
+
+
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+yum install docker-engine-1.12.5 docker-engine-selinux-1.12.5 -y
+
+
+
+
+
+
+yum install epel-release -y
+yum install python-pip -y
+pip install -U pip
+
+
+yum install python-devel libffi-devel gcc openssl-devel libselinux-python -y
+
+yum install ansible -y
+
+
+/etc/ansible/ansible.cfg:
+
+[defaults]
+host_key_checking=False
+pipelining=True
+forks=100
+
+
+
+
+tee /etc/yum.repos.d/docker.repo << 'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+
+
+
+
+
+enable_cinder: "no"
+enable_haproxy: "no"
+
+
+
+
+
+
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+
+
+
+vi /etc/sysconfig/docker
+
+INSECURE_REGISTRY="--insecure-registry 192.168.122.21:5000"
+
+
+
+kolla-ansible -i /root/all-in-one bootstrap-servers
+
+kolla-ansible -i /root/all-in-one prechecks
+
+kolla-ansible -i /root/all-in-one deploy
+
+
+
+kolla-ansible destroy -i /root/all-in-one --yes-i-really-really-mean-it
+
+
+
+kolla-ansible deploy -i /root/all-in-one --yes-i-really-really-mean-it
+
+
+
+
+
+
+
+yum install -y tree net-tools bind-utils tree sysstat vim-en* \
+lrzsz NetworkManager-tui ntp ntpdate iftop tcpdump telnet traceroute python-devel \
+libffi-devel gcc openssl-devel git python-setuptools
+
+
+
+
+
+
+
+Network timed out while trying to connect to  kolla centos-binary-openvswitch-vswitchd 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

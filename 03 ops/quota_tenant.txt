@@ -1,0 +1,175 @@
+
+
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "Mxb|admin|cloudmind|demo|duoyi|services" | awk '/True/ {print $2}'`
+
+
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" " Tenants " " CPUs " " VMs " " Mem " " SSD " " SAS " " IPs " >> quota_tenant.txt
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" "------------" "------" "------" "------" "------" "------" "------" >> quota_tenant.txt
+
+for i in ${tenant_list}
+do
+
+tenant_name=`keystone tenant-list|awk '/'"$i"'/ {print $4}'`
+
+tenant_quota_vms=`nova quota-show --tenant $i|awk '/instances/ {print $4}'`
+tenant_quota_cores=`nova quota-show --tenant $i|awk '/cores/ {print $4}'`
+tenant_quota_ram0=`nova quota-show --tenant $i|awk '/ram/ {print $4}'`
+let tenant_quota_rams=tenant_quota_ram0/1024
+
+tenant_quota_yunpan_rl_gbs=`cinder quota-show $i|awk '/gigabytes_capacity/ {print $4}'`
+tenant_quota_yunpan_xn_gbs=`cinder quota-show $i|awk '/gigabytes_performance/ {print $4}'`
+
+tenant_quota_ips=`neutron quota-show --tenant-id $i|awk '/floatingip/ {print $4}'`
+
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" "${tenant_name}" "${tenant_quota_cores}" "${tenant_quota_vms}" "${tenant_quota_rams}" "${tenant_quota_yunpan_xn_gbs}" "${tenant_quota_yunpan_rl_gbs}" "${tenant_quota_ips}" >> quota_tenant.txt
+
+done
+
+
+
+
+
+
+
+
+Mxb|admin|cloudmind|demo|duoyi|services
+
+
+
+
+
+
+
+mail_list="chenying@cloudmind.cn" 
+mail_list_copy="martin@cloudmind.cn zhangjl@cloudmind.cn duoyichen@qq.com" 
+#mail_list_copy="chenying@cloudmind.cn duoyichen@qq.com"
+result_path="result"
+date0=`date +%s`
+date=`date -d @${date0} "+%Y-%m-%d_%H-%M-%S"`
+date2=`date -d @${date0} "+%Y-%m-%d %H:%M:%S"`
+report_file="./${result_path}/Openstack-Inspect-Report.${date}.txt"
+subject="Cloud Platform Inspect Report!($date2)"
+
+if [ ! -d ./${result_path} ];then
+    echo "${result_path} Directory not exsit, Make it..."
+    mkdir -p ./${result_path}
+fi
+
+echo "$subject" >> ${report_file};
+echo "--------------------------------------------------------------------------------" >> ${report_file};
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "openstack-status | grep -vE 'active|disabled|== |000'" >> ${report_file};
+echo "----------------------------------------------------" >> ${report_file};
+
+for i in `cat /etc/hosts|awk '/node-/ {print $3}'|sort`;
+do
+    echo "" >> ${report_file};
+    echo "------------ $i ------------" >> ${report_file};
+    ssh $i "openstack-status | grep -vE 'active|disabled|== |000'" >> ${report_file};
+done
+
+
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "ceph osd tree | grep -vE 'up|host|root|osd.24|osd.28'" >> ${report_file};
+echo "----------------------------------------------------" >> ${report_file};
+echo "" >> ${report_file};
+ceph osd tree | grep -vE 'up|host|root|osd.24|osd.28' >> ${report_file};
+
+
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "ceph -s" >> ${report_file};
+echo "----------------------------------------------------" >> ${report_file};
+echo "" >> ${report_file};
+ceph -s >> ${report_file};
+
+
+echo "" >> ${report_file};
+echo "" >> ${report_file};
+echo "----------------------------------------" >> ${report_file};
+echo "    Get Info On [${date2}]" >> ${report_file};
+echo "----------------------------------------" >> ${report_file};
+
+
+mail -s "$subject" -c "$mail_list_copy" "$mail_list" < ${report_file}
+#mail -s "$subject" -c "$mail_list_copy" chenying@cloudmind.cn < ${report_file}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#!/bin/bash
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "Mxb|admin|cloudmind|demo|duoyi|services|ziyun|zsm"|awk '/True/ {print $2}'`
+
+#printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "资源池名�? "CPU核数" "云主机台�? "内存云盘（G�? "容量性云盘（G�? "公网IP�? >> quota_tenant.txt
+
+
+printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "Tenants" "CPUs" "VMs" "Mem" "SSD" "SAS" "IPs" >> quota_tenant.txt
+printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "----------------" "--------" "--------" "--------" "--------" "--------" "--------" >> quota_tenant.txt
+
+for i in ${tenant_list}
+do
+
+tenant_name=`keystone tenant-list|awk '/'"$i"'/ {print $4}'`
+
+tenant_quota_vms=`nova quota-show --tenant $i|awk '/instances/ {print $4}'`
+tenant_quota_cores0=`nova quota-show --tenant $i|awk '/cores/ {print $4}'`
+let tenant_quota_cores=tenant_quota_cores0/1024
+tenant_quota_rams=`nova quota-show --tenant $i|awk '/ram/ {print $4}'`
+
+tenant_quota_yunpan_rl_gbs=`cinder quota-show $i|awk '/gigabytes_capacity/ {print $4}'`
+tenant_quota_yunpan_xn_gbs=`cinder quota-show $i|awk '/gigabytes_performance/ {print $4}'`
+
+tenant_quota_ips=`neutron quota-show --tenant-id $i|awk '/floatingip/ {print $4}'`
+
+printf "%16s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s  :  %-8s\n" "${tenant_name}" "${tenant_quota_cores}" "${tenant_quota_vms}" "${tenant_quota_rams}" "${tenant_quota_yunpan_xn_gbs}" "${tenant_quota_yunpan_rl_gbs}" "${tenant_quota_ips}" >> quota_tenant.txt
+
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

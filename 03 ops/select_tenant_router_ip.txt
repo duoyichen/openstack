@@ -1,0 +1,25 @@
+
+
+vi select_tenant_router_ip.sh
+i
+
+
+#!/bin/bash
+
+source /root/openrc
+
+router_id=`neutron router-list|awk -F "|" '/ip_address/ {print $2}'|cut -d ' ' -f 2`
+printf "%-15s %-20s\n" Tenant_Name Tenant_Router_IP >> tenant_router_ip.txt
+printf "%-15s %-20s\n" "---------------""--------------------" >> tenant_router_ip.txt
+
+for i in $router_id
+do
+    router_ip=`neutron router-list|awk -F ":" '/'"$i"'/ {print $6}'|cut -d '"' -f 2`
+    tenant_id=`mysql -e "use neutron;select * from routers;"|grep $i|awk '{print $1}'`
+    tenant_name=`keystone tenant-list|awk -F '|' '/'"$tenant_id"'/ {print $3}'|sed s/[[:space:]]//g`
+
+    printf "%-15s %-20s\n" "$tenant_name" "$router_ip" >> tenant_router_ip.txt
+
+done
+
+
