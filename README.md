@@ -174,7 +174,7 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
         <td rowspan=5>compute3<br>(node4)</td>
         <td rowspan=5>nova-compute<br>cinder-volume<br>ceph</td>
         <td>NIC0</td>
-        <td>10.0.33.31/24</td>
+        <td>10.0.33.33/24</td>
         <td>管理网络</td>
         <td>千兆</td>
     </tr>
