@@ -45,42 +45,168 @@ OpenStack版本：Juno版<br>
 ### 1.5  节点网络规划
 
 
-
-
-||||云平台网络与服务器网卡对应表||||
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|交换机端口|	节点|	安装的软件及服务|	网卡|	IP|	网络规划|	其他|
-|	|controller<br>(node1)|MariaDB,RabbitMQ,ntp<br>Keystone<br>Glance<br>Neutron<br>Dashboard<br>nova-api,cinder-api等|||||
-	
-	NIC0	10.0.33.11/24	管理网络	千兆
-			NIC1	192.168.33.11/24	私有网络	千兆以上
-			NIC2	172.16.33.11/24	存储网络	万兆
-			NIC3	10.0.38.0/24	外部网络	千兆
-			IPMI	10.0.99.11/24		
-	compute1
-(node2)	nova-compute
-cinder-volume
-ceph	NIC0	10.0.33.31/24	管理网络	千兆
-			NIC1	192.168.33.31/24	私有网络	千兆以上
-			NIC2	172.16.33.31/24	存储网络	万兆
-			NIC3			
-			IPMI	10.0.99.31/24		
-	compute2
-(node3)	nova-compute
-cinder-volume
-ceph	NIC0	10.0.33.32/24	管理网络	千兆
-			NIC1	192.168.33.32/24	私有网络	千兆以上
-			NIC2	172.16.33.32/24	存储网络	万兆
-			NIC3			
-			IPMI	10.0.99.32/24		
-	compute3
-(node4)	nova-compute
-cinder-volume
-ceph	NIC0	10.0.33.33/24	管理网络	千兆
-			NIC1	192.168.33.33/24	私有网络	千兆以上
-			NIC2	172.16.33.33/24	存储网络	万兆
-			NIC3			
-			IPMI	10.0.99.33/24		
+<table border=3>
+    <tr>
+        <td colspan=7>云平台网络与服务器网卡对应表</td>
+    </tr>
+    <tr>
+        <td>交换机端口</td>
+        <td>节点</td>	
+        <td>安装的软件及服务</td>
+        <td>网卡</td>
+        <td>IP</td>
+        <td>网络规划</td>
+        <td>其他</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td rowspan=5>controller<br>(node1)</td>
+        <td rowspan=5>MariaDB,RabbitMQ,ntp<br>Keystone<br>Glance<br>Neutron<br>Dashboard<br>nova-api,cinder-api等</td>
+        <td>NIC0</td>
+        <td>10.0.33.11/24</td>
+        <td>管理网络</td>
+        <td>千兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC1</td>
+        <td>192.168.33.11/24</td>
+        <td>私有网络</td>
+        <td>千兆+</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC2</td>
+        <td>172.16.33.11/24</td>
+        <td>存储网络</td>
+        <td>万兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC3</td>
+        <td>10.0.38.0/24</td>
+        <td>外部网络</td>
+        <td>千兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>IPMI</td>
+        <td>10.0.99.11/24</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td rowspan=5>compute1<br>(node2)</td>
+        <td rowspan=5>nova-compute<br>cinder-volume<br>ceph</td>
+        <td>NIC0</td>
+        <td>10.0.33.31/24</td>
+        <td>管理网络</td>
+        <td>千兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC1</td>
+        <td>192.168.33.31/24</td>
+        <td>私有网络</td>
+        <td>千兆+</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC2</td>
+        <td>172.16.33.31/24</td>
+        <td>存储网络</td>
+        <td>万兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC3</td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>IPMI</td>
+        <td>10.0.99.31/24</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td rowspan=5>compute2<br>(node3)</td>
+        <td rowspan=5>nova-compute<br>cinder-volume<br>ceph</td>
+        <td>NIC0</td>
+        <td>10.0.33.32/24</td>
+        <td>管理网络</td>
+        <td>千兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC1</td>
+        <td>192.168.33.32/24</td>
+        <td>私有网络</td>
+        <td>千兆+</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC2</td>
+        <td>172.16.33.32/24</td>
+        <td>存储网络</td>
+        <td>万兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC3</td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>IPMI</td>
+        <td>10.0.99.32/24</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td rowspan=5>compute3<br>(node4)</td>
+        <td rowspan=5>nova-compute<br>cinder-volume<br>ceph</td>
+        <td>NIC0</td>
+        <td>10.0.33.31/24</td>
+        <td>管理网络</td>
+        <td>千兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC1</td>
+        <td>192.168.33.33/24</td>
+        <td>私有网络</td>
+        <td>千兆+</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC2</td>
+        <td>172.16.33.33/24</td>
+        <td>存储网络</td>
+        <td>万兆</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NIC3</td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>IPMI</td>
+        <td>10.0.99.33/24</td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
 
 
 
