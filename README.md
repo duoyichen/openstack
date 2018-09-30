@@ -47,7 +47,7 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
 
 <table>
     <tr>
-        <td colspan=7 align="center">云平台网络与服务器网卡对应表</td>
+        <td colspan=7 align="center"><b>云平台网络与服务器网卡对应表</b></td>
     </tr>
     <tr align="center">
         <td width="90">端口</td>
