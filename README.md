@@ -106,7 +106,7 @@ NETMASK=255.255.255.0<br>
 GATEWAY=10.0.0.1<br>
 DEFROUTE=yes<br>
 NM_CONTROLLED=no<br>
-eof<br><br>
+eof<br>
 
 cat > /etc/sysconfig/network-scripts/ifcfg-eth1 <<eof<br>
 TYPE=Ethernet<br>
@@ -117,7 +117,7 @@ ONBOOT=yes<br>
 IPADDR=192.168.33.11<br>
 NETMASK=255.255.255.0<br>
 DEFROUTE=no<br>
-eof<br><br>
+eof<br>
 
 cat > /etc/sysconfig/network-scripts/ifcfg-eth2 <<eof
 TYPE=Ethernet
