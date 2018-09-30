@@ -1,0 +1,252 @@
+
+
+
+vi resource_statistics.sh
+i
+
+
+
+#!/bin/bash
+
+
+
+
+mail_list="zhaoxu@cloudmind.com" 
+mail_list_copy="martin@cloudmind.com zhangjl@cloudmind.com chenying@cloudmind.com duoyichen@qq.com" 
+#mail_list_copy="chenying@cloudmind.com duoyichen@qq.com"
+
+result_path="/root/o/result"
+date0=`date +%s`
+date=`date -d @${date0} "+%Y-%m-%d_%H-%M-%S"`
+date2=`date -d @${date0} "+%Y-%m-%d %H:%M:%S"`
+
+subject="Cloud Platform Resource Statistics!($date2)"
+
+if [ ! -d ${result_path} ];then
+    echo "${result_path} Directory not exsit, Make it..."
+    mkdir -p ${result_path}
+fi
+
+result_file="${result_path}/resource_statistics.${date}.txt"
+
+
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "Mxb|admin|cloudmind|demo|duoyi|services" | awk '/True/ {print $2}'`
+
+
+echo "All Resource" >> ${result_file}
+echo "--------------------------------" >> ${result_file}
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" " Tenants " " CPUs " " VMs " " Mem " " SSD " " SAS " " IPs " >> ${result_file}
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" "------------" "------" "------" "------" "------" "------" "------" >> ${result_file}
+
+#for i in duoyi
+for i in ${tenant_list}
+do
+
+    tenant_name=`keystone tenant-list|awk '/'"$i"'/ {print $4}'`
+
+    tenant_quota_vms=`nova quota-show --tenant $i|awk '/instances/ {print $4}'`
+    tenant_quota_cores=`nova quota-show --tenant $i|awk '/cores/ {print $4}'`
+    tenant_quota_ram0=`nova quota-show --tenant $i|awk '/ram/ {print $4}'`
+    let tenant_quota_rams=tenant_quota_ram0/1024
+
+    tenant_quota_yunpan_rl_gbs=`cinder quota-show $i|awk '/gigabytes_capacity/ {print $4}'`
+    tenant_quota_yunpan_xn_gbs=`cinder quota-show $i|awk '/gigabytes_performance/ {print $4}'`
+
+    tenant_quota_ips=`neutron quota-show --tenant-id $i|awk '/floatingip/ {print $4}'`
+
+    printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" "${tenant_name}" "${tenant_quota_cores}" "${tenant_quota_vms}" "${tenant_quota_rams}" "${tenant_quota_yunpan_xn_gbs}" "${tenant_quota_yunpan_rl_gbs}" "${tenant_quota_ips}" >> ${result_file}
+
+done
+
+
+
+source /root/martin
+
+vm_id=`nova list | grep -E "Running|Shutdown" | grep -Ev "2K3|W23_3|mxb|2003_64|cloudmind_mysql|cloudmind_web-bianyi" | cut -d '|' -f 2|cut -d ' ' -f 2`
+
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+echo "Martin's Resource" >> ${result_file}
+echo "--------------------------------" >> ${result_file}
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+
+#for i in cloudmind_web-bianyi
+for i in $vm_id
+do
+    vm_name=`nova show $i | grep ' name '|cut -d '|' -f 3|cut -d ' ' -f 2`
+    flavor=`nova show $i | grep flavor|head -1|cut -d '|' -f 3| cut -d '(' -f 1`
+    date=`nova show $i | grep created|head -1|cut -d '|' -f 3|cut -d ' ' -f 2|cut -d 'T' -f 1`
+
+    echo "" >> ${result_file}
+    echo "" >> ${result_file}
+    echo "-------- $vm_name --------" >> ${result_file}
+    echo "$flavor" >> ${result_file}
+    echo "$date" >> ${result_file}
+
+    disks=`cinder list --tenant Martin | grep $i | grep -v instance- | grep in-use|cut -d '|' -f 2 | cut -d ' ' -f 2`
+    disk_num=1
+    for j in $disks
+    do
+        disk_name=`cinder show $j | awk -F "|" '/display_name/ {print $3}'|awk '{print $1}'`
+        disk_type=`cinder show $j | awk -F "|" '/volume_type/ {print $3}'|awk '{print $1}'`
+        disk_size=`cinder show $j | awk -F "|" '/size/ {print $3}'|awk '{print $1}'`
+        disk_date=`cinder show $j | awk -F "|" '/created_at/ {print $3}'|awk '{print $1}'|cut -d 'T' -f 1`
+
+        echo "" >> ${result_file}
+        echo "DISK_$disk_num" >> ${result_file}
+        echo "DISK Name: $disk_name" >> ${result_file}
+        echo "$disk_type" >> ${result_file}
+        echo "${disk_size}GB" >> ${result_file}
+        echo "$disk_date" >> ${result_file}
+        let disk_num+=1
+    done
+done
+
+
+
+mail -s "$subject" -a ${result_file} -c "$mail_list_copy" "$mail_list" < ${result_file}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cat resource_statistics.sh 
+#!/bin/bash
+
+
+
+mail_list="chenying@cloudmind.com" 
+#mail_list_copy="martin@cloudmind.com zhangjl@cloudmind.com duoyichen@qq.com" 
+mail_list_copy="chenying@cloudmind.com duoyichen@qq.com"
+
+result_path="/root/o/result"
+date0=`date +%s`
+date=`date -d @${date0} "+%Y-%m-%d_%H-%M-%S"`
+date2=`date -d @${date0} "+%Y-%m-%d %H:%M:%S"`
+
+subject="Cloud Platform Resource Statistics!($date2)"
+
+if [ ! -d ${result_path} ];then
+    echo "${result_path} Directory not exsit, Make it..."
+    mkdir -p ${result_path}
+fi
+
+result_file="${result_path}/resource_statistics.${date}.txt"
+
+
+source /root/openrc
+
+tenant_list=`keystone tenant-list|grep -vE "Mxb|admin|cloudmind|demo|duoyi|services" | awk '/True/ {print $2}'`
+
+
+echo "All Resource" >> ${result_file}
+echo "--------------------------------" >> ${result_file}
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" " Tenants " " CPUs " " VMs " " Mem " " SSD " " SAS " " IPs " >> ${result_file}
+printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" "------------" "------" "------" "------" "------" "------" "------" >> ${result_file}
+
+#for i in duoyi
+for i in ${tenant_list}
+do
+
+    tenant_name=`keystone tenant-list|awk '/'"$i"'/ {print $4}'`
+
+    tenant_quota_vms=`nova quota-show --tenant $i|awk '/instances/ {print $4}'`
+    tenant_quota_cores=`nova quota-show --tenant $i|awk '/cores/ {print $4}'`
+    tenant_quota_ram0=`nova quota-show --tenant $i|awk '/ram/ {print $4}'`
+    let tenant_quota_rams=tenant_quota_ram0/1024
+
+    tenant_quota_yunpan_rl_gbs=`cinder quota-show $i|awk '/gigabytes_capacity/ {print $4}'`
+    tenant_quota_yunpan_xn_gbs=`cinder quota-show $i|awk '/gigabytes_performance/ {print $4}'`
+
+    tenant_quota_ips=`neutron quota-show --tenant-id $i|awk '/floatingip/ {print $4}'`
+
+    printf "%12s|%-6s|%-6s|%-6s|%-6s|%-6s|%-6s\n" "${tenant_name}" "${tenant_quota_cores}" "${tenant_quota_vms}" "${tenant_quota_rams}" "${tenant_quota_yunpan_xn_gbs}" "${tenant_quota_yunpan_rl_gbs}" "${tenant_quota_ips}" >> ${result_file}
+
+done
+
+
+
+source /root/martin
+
+vm_id=`nova list | grep -E "Running|Shutdown" | grep -Ev "2K3|W23_3|mxb|2003_64|cloudmind_mysql|cloudmind_web-bianyi" | cut -d '|' -f 2|cut -d ' ' -f 2`
+
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+echo "Martin's Resource" >> ${result_file}
+echo "--------------------------------" >> ${result_file}
+echo "" >> ${result_file}
+echo "" >> ${result_file}
+
+#for i in cloudmind_web-bianyi
+for i in $vm_id
+do
+    vm_name=`nova show $i | grep ' name '|cut -d '|' -f 3|cut -d ' ' -f 2`
+    flavor=`nova show $i | grep flavor|head -1|cut -d '|' -f 3| cut -d '(' -f 1`
+    date=`nova show $i | grep created|head -1|cut -d '|' -f 3|cut -d ' ' -f 2|cut -d 'T' -f 1`
+
+    echo "" >> ${result_file}
+    echo "" >> ${result_file}
+    echo "-------- $vm_name --------" >> ${result_file}
+    echo "$flavor" >> ${result_file}
+    echo "$date" >> ${result_file}
+
+    disks=`cinder list --tenant Martin | grep $i | grep -v instance- | grep in-use|cut -d '|' -f 2 | cut -d ' ' -f 2`
+    disk_num=1
+    for j in $disks
+    do
+        disk_name=`cinder show $j | awk -F "|" '/display_name/ {print $3}'|awk '{print $1}'`
+        disk_type=`cinder show $j | awk -F "|" '/volume_type/ {print $3}'|awk '{print $1}'`
+        disk_size=`cinder show $j | awk -F "|" '/size/ {print $3}'|awk '{print $1}'`
+        disk_date=`cinder show $j | awk -F "|" '/created_at/ {print $3}'|awk '{print $1}'|cut -d 'T' -f 1`
+
+        echo "" >> ${result_file}
+        echo "DISK_$disk_num" >> ${result_file}
+        echo "DISK Name: $disk_name" >> ${result_file}
+        echo "$disk_type" >> ${result_file}
+        echo "${disk_size}GB" >> ${result_file}
+        echo "$disk_date" >> ${result_file}
+        let disk_num+=1
+    done
+done
+
+
+
+#mail -s "$subject" -c "$mail_list_copy" "$mail_list" < ${result_file}
+mail -s "$subject" -a ${result_file} -c "$mail_list_copy" "$mail_list" < ${result_file}
