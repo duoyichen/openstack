@@ -53,7 +53,7 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
         <td>交换机端口</td>
         <td>节点</td>	
         <td>安装的软件及服务</td>
-        <td>网卡</td>
+        <tdwidth="60">网卡</td>
         <td>IP</td>
         <td>网络规划</td>
         <td>其他</td>
