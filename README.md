@@ -50,13 +50,13 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
         <td colspan=7 align="center">云平台网络与服务器网卡对应表</td>
     </tr>
     <tr align="center">
-        <td>交换机端口</td>
+        <td width="90">端口</td>
         <td>节点</td>	
-        <td>安装的软件及服务</td>
-        <td width="20">网卡</td>
-        <td>IP</td>
-        <td>网络规划</td>
-        <td>其他</td>
+        <td width="210">安装的软件及服务</td>
+        <td width=70>网卡</td>
+        <td width=150>IP</td>
+        <td width=110>网络规划</td>
+        <td width=80>其他</td>
     </tr>
     <tr>
         <td></td>
