@@ -1,6 +1,6 @@
-##开发环境搭建
+## 开发环境搭建
 
-###基本需求
+### 基本需求
 
 通常说搭建好开发环境，我们要完成如下内容。
 
@@ -12,17 +12,17 @@
 
 *　可以跑通接口测试
 
-###Centos 桌面版安装 （可选）
+### Centos 桌面版安装 （可选）
 
 	yum groupinstall -y "X Window System"
 	yum groupinstall -y "KDE Desktop"
 	startkde
 
-###也可以直接使用X11 + Xmanager 远程显示
+### 也可以直接使用X11 + Xmanager 远程显示
 
 具体如何使用请参见视频
 
-###配置Eclipse
+### 配置Eclipse
 
 
 下载安装Eclipse
@@ -74,7 +74,7 @@
 
 	tox -e py26 nova.tests.scheduler
 
-###运行集成测试
+### 运行集成测试
 
 集成测试，主要是针对 OpenStack 各个API的黑盒测试，通常用于功能测试，同时也是CI 的基本保护网之一，在新的代码变化merge 到master之前每个有效的case必须都是pass。
 
@@ -100,7 +100,7 @@ vi etc/tempest.conf
 
 
 
-###Keystone 远程调试
+### Keystone 远程调试
 
 Eclipse 配置端配置
 
