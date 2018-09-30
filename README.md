@@ -309,168 +309,168 @@ sed -i '/ 3.centos.pool.ntp.org /a\
 restrict -4 default kod notrap nomodify\
 restrict -6 default kod notrap nomodify' /etc/ntp.conf
 
-2.1.3  安装数据库并初始化
+2.1.3  安装数据库并初始化<br>
 
-yum install -y mariadb mariadb-server MySQL-python
+yum install -y mariadb mariadb-server MySQL-python<br>
 
-sed -i '/symbolic-links=0/a\bind-address = 0.0.0.0\
-default-storage-engine = innodb\
-innodb_file_per_table\
-collation-server = utf8_general_ci\
-init-connect = "SET NAMES utf8"\
-character-set-server = utf8' /etc/my.cnf
+sed -i '/symbolic-links=0/a\bind-address = 0.0.0.0\<br>
+default-storage-engine = innodb\<br>
+innodb_file_per_table\<br>
+collation-server = utf8_general_ci\<br>
+init-connect = "SET NAMES utf8"\<br>
+character-set-server = utf8' /etc/my.cnf<br>
 
-systemctl enable mariadb.service
-systemctl start mariadb.service
+systemctl enable mariadb.service<br>
+systemctl start mariadb.service<br>
 
-mysql_secure_installation
-一路回车 ，取默认，并设置 root 用户的密码为 MYSQL_ROOT_PASS_SUR 。
+mysql_secure_installation<br>
+一路回车 ，取默认，并设置 root 用户的密码为 MYSQL_ROOT_PASS_SUR 。<br>
 
-2.1.4  OpenStack 源，通用包，等相关安装源
+2.1.4  OpenStack 源，通用包，等相关安装源<br>
 
-yum install yum-plugin-priorities
-yum install http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-yum install http://rdo.fedorapeople.org/openstack-juno/rdo-release-juno.rpm
+yum install yum-plugin-priorities<br>
+yum install http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm<br>
+yum install http://rdo.fedorapeople.org/openstack-juno/rdo-release-juno.rpm<br>
 
-通用包
-yum install -y openstack-selinux openstack-utils
-yum upgrade -y
-reboot
+通用包<br>
+yum install -y openstack-selinux openstack-utils<br>
+yum upgrade -y<br>
+reboot<br>
 
-2.1.6  安装 Rabbitmq 服务，作为消息服务，在各个组件节点之间通信
+2.1.6  安装 Rabbitmq 服务，作为消息服务，在各个组件节点之间通信<br>
 
-yum -y install rabbitmq-server
+yum -y install rabbitmq-server<br>
 
-/usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management
-systemctl enable rabbitmq-server.service
-systemctl start rabbitmq-server.service
+/usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management<br>
+systemctl enable rabbitmq-server.service<br>
+systemctl start rabbitmq-server.service<br>
 
-rabbitmqctl change_password guest RABBIT_GUEST_PASS_SUR
+rabbitmqctl change_password guest RABBIT_GUEST_PASS_SUR<br>
 
-到这里，Controller Node 的初始化完成。
-
-
-### 2.2  准备 Compute Node
-
-2.2.1  网络，主机名等相关参数配置
-
-cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<eof
-TYPE=Ethernet
-BOOTPROTO=static
-NAME=eth0
-DEVICE=eth0
-ONBOOT=yes
-IPADDR=10.0.33.31
-NETMASK=255.255.255.0
-GATEWAY=10.0.0.1
-DEFROUTE=yes
-NM_CONTROLLED=no
-eof
-
-cat > /etc/sysconfig/network-scripts/ifcfg-eth1 <<eof
-TYPE=Ethernet
-BOOTPROTO=static
-NAME=eth1
-DEVICE=eth1
-ONBOOT=yes
-IPADDR=192.168.33.31
-NETMASK=255.255.255.0
-DEFROUTE=no
-eof
-
-cat > /etc/sysconfig/network-scripts/ifcfg-eth2 <<eof
-TYPE=Ethernet
-BOOTPROTO=static
-NAME=eth2
-DEVICE=eth2
-ONBOOT=yes
-IPADDR=172.16.33.31
-NETMASK=255.255.255.0
-DEFROUTE=no
-eof
-
-cat > /etc/sysconfig/network-scripts/ifcfg-eth3 <<eof
-TYPE=Ethernet
-BOOTPROTO=none
-NAME=eth3
-DEVICE=eth3
-ONBOOT=no
-eof
-
-echo 'nameserver 10.0.0.1' > /etc/resolv.conf
-echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
-echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
-
-systemctl disable NetworkManager
-
-systemctl stop NetworkManager
-
-systemctl disable firewalld
-systemctl stop firewalld
-
-systemctl disable postfix
-systemctl stop postfix
-
-sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
-setenforce 0
+到这里，Controller Node 的初始化完成。<br>
 
 
-hostnamectl --static set-hostname compute1
+### 2.2  准备 Compute Node<br>
 
-cat > /etc/hosts <<eof
-# compute3
-10.0.33.33       compute3
-# compute2
-10.0.33.32       compute2
-# compute1
-10.0.33.31       compute1
-# controller
-10.0.33.11       controller
-eof
+2.2.1  网络，主机名等相关参数配置<br>
 
-init 6
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=static<br>
+NAME=eth0<br>
+DEVICE=eth0<br>
+ONBOOT=yes<br>
+IPADDR=10.0.33.31<br>
+NETMASK=255.255.255.0<br>
+GATEWAY=10.0.0.1<br>
+DEFROUTE=yes<br>
+NM_CONTROLLED=no<br>
+eof<br>
 
-2.2.2  安装 ntp 服务，各节点之间时间要同步。
+cat > /etc/sysconfig/network-scripts/ifcfg-eth1 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=static<br>
+NAME=eth1<br>
+DEVICE=eth1<br>
+ONBOOT=yes<br>
+IPADDR=192.168.33.31<br>
+NETMASK=255.255.255.0<br>
+DEFROUTE=no<br>
+eof<br>
 
-yum install -y ntp
-systemctl enable ntpd.service
-systemctl start ntpd.service
+cat > /etc/sysconfig/network-scripts/ifcfg-eth2 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=static<br>
+NAME=eth2<br>
+DEVICE=eth2<br>
+ONBOOT=yes<br>
+IPADDR=172.16.33.31<br>
+NETMASK=255.255.255.0<br>
+DEFROUTE=no<br>
+eof<br>
 
-sed -i '/ 3.centos.pool.ntp.org /a\
-server controller prefer iburst' /etc/ntp.conf
-sed -i '/.centos.pool.ntp.org iburst/d' /etc/ntp.conf
+cat > /etc/sysconfig/network-scripts/ifcfg-eth3 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=none<br>
+NAME=eth3<br>
+DEVICE=eth3<br>
+ONBOOT=no<br>
+eof<br>
 
-2.2.3  安装OpenStack等相关安装源，通用包
+echo 'nameserver 10.0.0.1' > /etc/resolv.conf<br>
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf<br>
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf<br>
 
-yum install yum-plugin-priorities
-yum install http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-yum install http://rdo.fedorapeople.org/openstack-juno/rdo-release-juno.rpm
+systemctl disable NetworkManager<br>
 
-yum install -y openstack-selinux openstack-utils
-yum upgrade -y
-reboot
+systemctl stop NetworkManager<br>
 
-到这里，Compute Node 的初始化也完成。
+systemctl disable firewalld<br>
+systemctl stop firewalld<br>
+
+systemctl disable postfix<br>
+systemctl stop postfix<br>
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config<br>
+setenforce 0<br>
 
 
-### 2.3  验证网络
+hostnamectl --static set-hostname compute1<br>
 
-在 Controller Node 上：
-ping -c 4 openstack.org
-ping -c 4 compute1
+cat > /etc/hosts <<eof<br>
+\# compute3<br>
+10.0.33.33       compute3<br>
+\# compute2<br>
+10.0.33.32       compute2<br>
+\# compute1<br>
+10.0.33.31       compute1<br>
+\# controller<br>
+10.0.33.11       controller<br>
+eof<br>
 
-ping -c 4 baidu.com
-ping -c 4 compute1
+init 6<br>
 
-在 Compute Node 上：
-ping -c 4 openstack.org
-ping -c 4 controller
+2.2.2  安装 ntp 服务，各节点之间时间要同步。<br>
 
-ping -c 4 baidu.com
-ping -c 4 controller
+yum install -y ntp<br>
+systemctl enable ntpd.service<br>
+systemctl start ntpd.service<br>
 
-到这里，系统初始化完成。如果有compute2，compute3等节点，执行同样操作，完成初始化配置。
+sed -i '/ 3.centos.pool.ntp.org /a\<br>
+server controller prefer iburst' /etc/ntp.conf<br>
+sed -i '/.centos.pool.ntp.org iburst/d' /etc/ntp.conf<br>
 
+2.2.3  安装OpenStack等相关安装源，通用包<br>
+
+yum install yum-plugin-priorities<br>
+yum install http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm<br>
+yum install http://rdo.fedorapeople.org/openstack-juno/rdo-release-juno.rpm<br>
+
+yum install -y openstack-selinux openstack-utils<br>
+yum upgrade -y<br>
+reboot<br>
+
+到这里，Compute Node 的初始化也完成。<br>
+
+
+### 2.3  验证网络<br>
+
+在 Controller Node 上：<br>
+ping -c 4 openstack.org<br>
+ping -c 4 compute1<br>
+
+ping -c 4 baidu.com<br>
+ping -c 4 compute1<br>
+
+在 Compute Node 上：<br>
+ping -c 4 openstack.org<br>
+ping -c 4 controller<br>
+
+ping -c 4 baidu.com<br>
+ping -c 4 controller<br>
+
+到这里，系统初始化完成。如果有compute2，compute3等节点，执行同样操作，完成初始化配置。<br>
+<br>
 
 
 
