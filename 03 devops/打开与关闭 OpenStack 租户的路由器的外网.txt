@@ -1,0 +1,105 @@
+打开与关闭 OpenStack 租户的路由器的外网
+
+
+
+
+
+
+
+[root@controller ~]# neutron help router-create
+usage: neutron router-create [-h] [-f {shell,table,value}] [-c COLUMN]
+                             [--max-width <integer>] [--prefix PREFIX]
+                             [--request-format {json,xml}]
+                             [--tenant-id TENANT_ID] [--admin-state-down]
+                             [--distributed {True,False}] [--ha {True,False}]
+                             NAME
+
+Create a router for a given tenant.
+
+positional arguments:
+  NAME                  Name of router to create.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --request-format {json,xml}
+                        The XML or JSON request format.
+  --tenant-id TENANT_ID
+                        The owner tenant ID.
+  --admin-state-down    Set admin state up to false.
+  --distributed {True,False}
+                        Create a distributed router.
+  --ha {True,False}     Create a highly available router.
+
+output formatters:
+  output formatter options
+
+  -f {shell,table,value}, --format {shell,table,value}
+                        the output format, defaults to table
+  -c COLUMN, --column COLUMN
+                        specify the column(s) to include, can be repeated
+
+table formatter:
+  --max-width <integer>
+                        Maximum display width, 0 to disable
+
+shell formatter:
+  a format a UNIX shell can parse (variable="value")
+
+  --prefix PREFIX       add a prefix to all variable names
+
+注意：创建路由器的时候有个参数，--admin-state-down，他是用来关闭路由器的外网连接的。其实相应的还有一个 --admin-state-up 参数，估计是默认值，所以没有显示，可以关闭的状态下打开路由器的外网连接。
+
+
+
+
+[root@controller ~]# neutron help router-update
+usage: neutron router-update [-h] [--request-format {json,xml}] ROUTER
+
+Update router's information.
+
+positional arguments:
+  ROUTER                ID or name of router to update.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --request-format {json,xml}
+                        The XML or JSON request format.
+
+
+
+
+
+
+
+
+[root@controller ~]# neutron router-list
++--------------------------------------+------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------+-------+
+| id                                   | name       | external_gateway_info                                                                                                                                                                  | distributed | ha    |
++--------------------------------------+------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------+-------+
+| cd7ffb59-d019-4038-8e75-abfdbfca5be4 | Pri-Router | {"network_id": "90c61569-0aad-4a97-aa8f-5f13480d123c", "enable_snat": true, "external_fixed_ips": [{"subnet_id": "038205b0-6fa4-463b-bb89-a83bfaf9a62c", "ip_address": "10.0.38.14"}]} | False       | False |
++--------------------------------------+------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------+-------+
+
+
+[root@controller ~]# neutron router-show Pri-Router
++-----------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Field                 | Value                                                                                                                                                                                  |
++-----------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| admin_state_up        | False                                                                                                                                                                                  |
+| distributed           | False                                                                                                                                                                                  |
+| external_gateway_info | {"network_id": "90c61569-0aad-4a97-aa8f-5f13480d123c", "enable_snat": true, "external_fixed_ips": [{"subnet_id": "038205b0-6fa4-463b-bb89-a83bfaf9a62c", "ip_address": "10.0.38.14"}]} |
+| ha                    | False                                                                                                                                                                                  |
+| id                    | cd7ffb59-d019-4038-8e75-abfdbfca5be4                                                                                                                                                   |
+| name                  | Pri-Router                                                                                                                                                                             |
+| routes                |                                                                                                                                                                                        |
+| status                | ACTIVE                                                                                                                                                                                 |
+| tenant_id             | 8ff1c7ef12aa4673951cc463ef507ed7                                                                                                                                                       |
++-----------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+注意这个参数，admin_state_up
+
+
+[root@controller ~]# neutron router-update --admin_state_up Pri-Router
+Updated router: Pri-Router
+[root@controller ~]# 
+
+看一下，租户的外网通了，更新生效。
