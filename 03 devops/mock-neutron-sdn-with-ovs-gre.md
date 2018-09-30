@@ -1,20 +1,16 @@
 
-#Neutron SDN 手动实现手册
+# Neutron SDN 手动实现手册
+<br><br><br>
 
-声明：本博客欢迎转发，但请保留原作者信息!      
-作者：[罗勇] 云计算工程师、敏捷开发实践者    
-博客：[http://yongluo2013.github.io/](http://yongluo2013.github.io/)    
-微博：[http://weibo.com/u/1704250760/](http://weibo.com/u/1704250760/)  
-
-##安装架构介绍
+## 安装架构介绍
 
 本文旨在通过自己搭建类似neutron （openvswitch + gre） 实现SDN 的环境，学习了解其工作原理，模拟核心原理，比如：同一租户自定义网络 instance 互通，手动为instance 分配 floating ip 等相关内容。
 
 
-![mock neutron architecture](/installation/images/mock-neutron-arch.png)
+![mock neutron architecture](mock-neutron-arch.png)
 
 
-###虚拟网络
+### 虚拟网络
 
 需要新建3个虚拟网络Net0、Net1和Net2，其在virtual box 中对应配置如下。
 
@@ -39,7 +35,7 @@
 		IP block: 192.168.4.0/24
 		Linux device: eth2
 
-###虚拟机
+### 虚拟机
 
 需要新建2个虚拟机VM1和VM2，其对应配置如下。
 
@@ -58,7 +54,7 @@
 		Networks:net1,net2,net3
 
 
-###Linux interface设置
+### Linux interface设置
 
 	network1
 	     eth0:10.20.0.201   (management network)
@@ -71,7 +67,7 @@
 	     eht2:192.168.4.202  (private network，gre tunning)
 
 
-##模拟安装网络节点(Network1)
+## 模拟安装网络节点(Network1)
 
 模拟Network 节点相关实现，比如L3、dhcp-agent实现，为了模拟多节点网络情况，这里Network同时也模拟一个计算节点，模拟M2 openvswitch 实现，上面运行instance1。
 
@@ -184,9 +180,9 @@
 
 	ovs-vsctl show
 
-##模拟安装计算节点(compute1)
+## 模拟安装计算节点(compute1)
 
-##网络接口配置
+## 网络接口配置
 
 	vi /etc/sysconfig/network-scripts/ifcfg-eth0
 	DEVICE=eth0
@@ -323,7 +319,7 @@
 	ip netns exec dhcp01 ping 192.168.1.11
 
 
-##通过 Network Namespace 和Iptables 实现L3 router
+## 通过 Network Namespace 和Iptables 实现L3 router
 
 ovs-vsctl add-br br-ex
 
