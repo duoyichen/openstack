@@ -1,0 +1,165 @@
+
+
+
+yum install -y wget vim git screen
+
+
+
+wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo
+
+
+wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-6.repo
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+wget -O /etc/yum.repos.d/epel-testing.repo http://mirrors.aliyun.com/repo/epel-testing.repo
+
+
+
+此外，修改pip源可以加快安装速度，国内可以使用豆瓣源
+在/root主目录下创建.pip文件夹
+
+mkdir ~/.pip
+
+vi ~/.pip/pip.conf
+
+[global]
+trusted-host =  pypi.douban.com
+index-url = http://pypi.douban.com/simple
+
+
+
+adduser stack
+
+echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+su - stack
+
+git clone https://git.openstack.org/openstack-dev/devstack
+
+git clone http://git.trystack.cn/openstack-dev/devstack.git -b stable/newton
+
+cd devstack
+
+
+pwd
+
+
+vi local.conf
+
+
+[[local|localrc]]
+ADMIN_PASSWORD=admin_pass
+DATABASE_PASSWORD=$ADMIN_PASSWORD
+RABBIT_PASSWORD=$ADMIN_PASSWORD
+SERVICE_PASSWORD=$ADMIN_PASSWORD
+
+# use TryStack git mirror
+GIT_BASE=http://git.trystack.cn
+NOVNC_REPO=http://git.trystack.cn/kanaka/noVNC.git
+SPICE_REPO=http://git.trystack.cn/git/spice/spice-html5.git
+
+HOST_IP=175.25.181.251
+SERVICE_IP_VERSION=4
+
+# instead of default network
+FIXED_RANGE="10.0.0.0/24"
+FLOATING_RANGE="175.25.181.128/25"
+Q_FLOATING_ALLOCATION_POOL=start=175.25.181.180,end=175.25.181.199
+PUBLIC_NETWORK_GATEWAY="175.25.181.129"
+
+# Define images to be automatically downloaded during the DevStack built process.
+DOWNLOAD_DEFAULT_IMAGES=False  
+IMAGE_URLS="http://images.trystack.cn/cirros/cirros-0.3.4-x86_64-disk.img"
+
+
+
+
+
+
+
+
+
+
+[[local|localrc]]
+HOST_IP=211.154.8.4
+SERVICE_HOST=211.154.8.4
+MYSQL_HOST=211.154.8.4
+RABBIT_HOST=211.154.8.4
+GLANCE_HOSTPORT=211.154.8.4:9292
+SERVICE_IP_VERSION=4
+ADMIN_PASSWORD=admin_pass
+DATABASE_PASSWORD=admin_pass
+RABBIT_PASSWORD=admin_pass
+SERVICE_PASSWORD=admin_pass
+
+# use TryStack git mirror
+GIT_BASE=http://git.trystack.cn
+NOVNC_REPO=http://git.trystack.cn/kanaka/noVNC.git
+SPICE_REPO=http://git.trystack.cn/git/spice/spice-html5.git
+
+## Neutron options
+Q_USE_SECGROUP=True
+FLOATING_RANGE="211.154.8.0/26"
+IPV4_ADDRS_SAFE_TO_USE="10.1.1.0/24"
+Q_FLOATING_ALLOCATION_POOL=start=211.154.8.6,end=211.154.8.10
+PUBLIC_NETWORK_GATEWAY="211.154.8.1"
+PUBLIC_INTERFACE=eth0
+
+# Open vSwitch provider networking configuration
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+OVS_PHYSICAL_BRIDGE=br-ex
+PUBLIC_BRIDGE=br-ex
+OVS_BRIDGE_MAPPINGS=public:br-ex
+
+# Define images to be automatically downloaded during the DevStack built process.
+DOWNLOAD_DEFAULT_IMAGES=False  
+IMAGE_URLS="http://images.trystack.cn/cirros/cirros-0.3.4-x86_64-disk.img"
+
+
+
+vi /etc/rc.local
+
+ifconfig eth0 0
+ifconfig br-ex 211.154.8.4/24
+route add default gw 211.154.8.1
+
+
+
+
+
+
+
+rejoin-stack.sh
+
+
+#!/usr/bin/env bash
+
+# This script rejoins an existing screen, or re-creates a
+# screen session from a previous run of stack.sh.
+
+TOP_DIR=`dirname $0`
+
+# Import common functions in case the localrc (loaded via stackrc)
+# uses them.
+source $TOP_DIR/functions
+
+source $TOP_DIR/stackrc
+
+# if screenrc exists, run screen
+if [[ -e $TOP_DIR/stack-screenrc ]]; then
+    if screen -ls | egrep -q "[0-9].stack"; then
+        echo "Attaching to already started screen session.."
+        exec screen -r stack
+    fi
+    exec screen -c $TOP_DIR/stack-screenrc
+fi
+
+echo "Couldn't find $TOP_DIR/stack-screenrc file; have you run stack.sh yet?"
+exit 1
+
+
+
+
+
+
+机器重启，运行rejoin-stack.sh，可以启动devstack的服务。若要到安装目录下启动各个服务，具体包括哪些呢，有没有所有服务的列表，可以自己写个脚本关闭这些服务
