@@ -304,10 +304,10 @@ yum install -y ntp<br>
 systemctl enable ntpd.service<br>
 systemctl start ntpd.service<br>
 
-将controller节点作为ntp服务器：
-sed -i '/ 3.centos.pool.ntp.org /a\
-restrict -4 default kod notrap nomodify\
-restrict -6 default kod notrap nomodify' /etc/ntp.conf
+将controller节点作为ntp服务器：<br>
+sed -i '/ 3.centos.pool.ntp.org /a\<br>
+restrict -4 default kod notrap nomodify\<br>
+restrict -6 default kod notrap nomodify' /etc/ntp.conf<br>
 
 2.1.3  安装数据库并初始化<br>
 
