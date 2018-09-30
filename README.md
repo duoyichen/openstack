@@ -95,29 +95,29 @@ ceph	NIC0	10.0.33.33/24	管理网络	千兆
  
 2.1.1  网络，主机名等相关参数配置
 
-cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<eof
-TYPE=Ethernet
-BOOTPROTO=static
-NAME=eth0
-DEVICE=eth0
-ONBOOT=yes
-IPADDR=10.0.33.11
-NETMASK=255.255.255.0
-GATEWAY=10.0.0.1
-DEFROUTE=yes
-NM_CONTROLLED=no
-eof
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=static<br>
+NAME=eth0<br>
+DEVICE=eth0<br>
+ONBOOT=yes<br>
+IPADDR=10.0.33.11<br>
+NETMASK=255.255.255.0<br>
+GATEWAY=10.0.0.1<br>
+DEFROUTE=yes<br>
+NM_CONTROLLED=no<br>
+eof<br><br>
 
-cat > /etc/sysconfig/network-scripts/ifcfg-eth1 <<eof
-TYPE=Ethernet
-BOOTPROTO=static
-NAME=eth1
-DEVICE=eth1
-ONBOOT=yes
-IPADDR=192.168.33.11
-NETMASK=255.255.255.0
-DEFROUTE=no
-eof
+cat > /etc/sysconfig/network-scripts/ifcfg-eth1 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=static<br>
+NAME=eth1<br>
+DEVICE=eth1<br>
+ONBOOT=yes<br>
+IPADDR=192.168.33.11<br>
+NETMASK=255.255.255.0<br>
+DEFROUTE=no<br>
+eof<br><br>
 
 cat > /etc/sysconfig/network-scripts/ifcfg-eth2 <<eof
 TYPE=Ethernet
