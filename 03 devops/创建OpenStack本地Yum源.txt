@@ -1,0 +1,139 @@
+系统初始化
+
+/etc/init.d/iptables stop
+chkconfig iptables off
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+
+chkconfig postfix off
+
+sed -i 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' \
+/etc/ssh/sshd_config
+sed -i 's/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+
+
+
+
+安装相关工具
+
+yum install -y httpd yum-utils createrepo
+chkconfig httpd on
+service httpd start
+
+
+vim /etc/httpd/conf/httpd.conf
+
+IndexOptions FoldersFirst
+IndexOptions VersionSort
+IndexOptions NameWidth=*
+#IndexOptions DescriptionWidth=128
+IndexOptions IconHeight=16
+IndexOptions IconWidth=16
+
+
+
+
+
+
+在虚拟机里挂载虚拟硬盘
+
+mkdir -p /var/www/html/o
+
+mkfs.ext4 /dev/sdb
+mount /dev/sdb /var/www/html/o
+echo "/dev/sdb               /var/www/html/o       ext4    defaults        0 0" >> /etc/fstab
+
+mkdir -p /var/www/html/o/yum/openstack/icehouse/20150525
+cd /var/www/html/o/yum/openstack/icehouse/20150525
+
+
+
+
+
+配置好yum源，在默认的Yum源基础上，再安装OpenStack相关的Yum源
+
+ll /etc/yum.repos.d/
+mkdir -p /etc/yum.repos.d/bak/
+mv /etc/yum.repos.d/C*.repo /etc/yum.repos.d/bak/
+
+
+
+
+
+同步OpenStack Yum源，并制作Yum源
+
+yum clean all
+
+yum repolist
+
+reposync *
+
+#sed -i 's/keepcache=0/keepcache=1/g' /etc/yum.conf
+
+#reposync --repoid=openstack-icehouse
+
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/base
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/epel
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/extras
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/foreman-plugins
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/foreman
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/openstack-icehouse
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/puppetlabs-deps
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/puppetlabs-products
+createrepo /var/www/html/o/yum/openstack/icehouse/20150525/updates
+
+
+
+
+
+
+
+
+
+
+其他版本：
+
+mkdir -p /var/www/html/o/yum/openstack/kilo/20150518
+cd  /var/www/html/o/yum/openstack/kilo/20150518
+
+ll /etc/yum.repos.d/
+mv /etc/yum.repos.d/bak/C*.repo /etc/yum.repos.d/
+ll /etc/yum.repos.d/
+ll /etc/yum.repos.d/bak/
+mv /etc/yum.repos.d/surdoc.repo /etc/yum.repos.d/bak/
+
+mkdir -p /var/www/html/o/yum/openstack/juno/20150518
+cd  /var/www/html/o/yum/openstack/juno/20150518
+
+
+Juno版：
+
+createrepo /var/www/html/o/yum/openstack/juno/20150518/base
+createrepo /var/www/html/o/yum/openstack/juno/20150518/epel
+createrepo /var/www/html/o/yum/openstack/juno/20150518/extras
+createrepo /var/www/html/o/yum/openstack/juno/20150518/openstack-juno
+createrepo /var/www/html/o/yum/openstack/juno/20150518/updates
+
+Kilo版：
+
+createrepo /var/www/html/o/yum/openstack/kilo/20150518/base
+createrepo /var/www/html/o/yum/openstack/kilo/20150518/epel
+createrepo /var/www/html/o/yum/openstack/kilo/20150518/extras
+createrepo /var/www/html/o/yum/openstack/kilo/20150518/openstack-kilo
+createrepo /var/www/html/o/yum/openstack/kilo/20150518/updates
+
+
+
+
+
+
+
+
+
+wge t -rc -l 0 -nH -P /var/www/html/o/yum/20150401/ http://10.10.38.9/yum/
+不行，目录结构不对
+
+
+scp -r -P 32500 root@10.10.33.11:/var/www/html/images/ .
+
+

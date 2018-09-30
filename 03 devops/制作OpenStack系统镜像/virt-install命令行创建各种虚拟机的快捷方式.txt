@@ -1,0 +1,466 @@
+virt-install命令行创建各种虚拟机的快捷方式，以后只需复制粘贴就行了：
+
+虚拟机网络方式都采用桥接模式的，需要先在宿主机上创建网桥，如果是计算节点，默认就有，不用创建：
+
+
+
+yum install -y kvm qemu-kvm libvirt python-virtinst virt-manager qemu-kvm-tools bridge-utils virt-viewer virt-v2v
+
+ 
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-br0 <<eof
+DEVICE="br0"
+TYPE=Bridge
+ONBOOT=yes
+BOOTPROTO=static
+IPADDR=10.0.33.54
+NETMASK=255.255.0.0
+GATEWAY=10.0.0.1
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 << eof
+DEVICE=eth0
+TYPE=Ethernet
+ONBOOT=yes
+BOOTPROTO=none
+NM_CONTROLLED=no
+BRIDGE=br0
+eof
+
+service network restart
+
+
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-br0 <<eof
+DEVICE="br0"
+TYPE=Bridge
+ONBOOT=yes
+BOOTPROTO=static
+IPADDR=211.154.8.51
+NETMASK=255.255.255.192
+GATEWAY=211.154.8.1
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 << eof
+DEVICE=eth0
+TYPE=Ethernet
+ONBOOT=yes
+BOOTPROTO=none
+NM_CONTROLLED=no
+BRIDGE=br0
+eof
+
+service network restart
+
+
+
+
+
+
+/usr/libexec/qemu-kvm  -m 4096 -boot d \
+-drive file=/osimage/Windows2003R2ENTX64SP2.qcow2,if=virtio \
+-drive file=/osimage/iso/cn_win_srv_2003_r2_enterprise_x64_with_sp2_vl_cd1_X13-47314.iso,media=cdrom \
+-drive file=/osimage/iso/virtio-win-0.1.126_amd64.vfd,if=floppy \
+-net nic,model=virtio -usb -usbdevice tablet -vnc :2
+
+
+/usr/libexec/qemu-kvm -name w2003 -m 4096 -boot d \
+-drive file=/osimage/Windows2003R2ENTX64SP2.qcow2,if=virtio \
+-drive file=/osimage/iso/cn_win_srv_2003_r2_enterprise_x64_with_sp2_vl_cd1_X13-47314.iso,media=cdrom \
+-drive file=/osimage/iso/virtio-win-0.1.126_amd64.vfd,if=floppy \
+-net nic,model=virtio -usb -usbdevice tablet -vnc :2
+
+
+
+
+
+
+
+
+
+1. Windows7Ux64SP1
+
+
+qemu-img create -f qcow2 Windows7Ux64SP1.qcow2 20G
+
+virt-install --connect qemu:///system \
+--name Windows7 --ram 4096 --vcpus 2 \
+--network bridge=br0,model=virtio \
+--disk path=Windows7Ux64SP1.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/Windows7Ux64SP1.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5997 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win7
+
+
+
+
+
+2. Windows7 默认nat模式
+
+
+qemu-img create -f qcow2 Windows7Ux64SP1.qcow2 20G
+chown qemu:qemu /osimage -R
+
+virt-install --connect qemu:///system \
+--name Windows7 --ram 4096 --vcpus 2 \
+--network network=default,model=virtio \
+--disk path=Windows7Ux64SP1.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/Windows7Ux64SP1.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5900 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win7
+
+
+
+
+
+
+2.2 Windows7 x86 默认nat模式
+
+
+qemu-img create -f qcow2 Windows7Ux86SP1.qcow2 20G
+chown qemu:qemu /osimage -R
+
+virt-install --connect qemu:///system \
+--name Windows7x86 --ram 4096 --vcpus 2 \
+--network network=default,model=virtio \
+--disk path=Windows7Ux86SP1.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/cn_windows_7_ultimate_with_sp1_x86_dvd_u_677486.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5921 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win7
+
+
+利用镜像开启bridge模式kvm虚拟机：
+
+yum install -y qemu-kvm libvirt python-virtinst virt-viewer virt-manager
+
+yum install -y kvm kmod-kvm kvm-qemu-img libvirt-python qemu bridge-utils
+
+
+
+
+virt-install --connect qemu:///system \
+--name WIN7-3 --ram 8192 --vcpus 4 \
+--network bridge=br0,model=virtio \
+--disk path=Windows7Ux86SP1.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/virtio-win-0.1-100.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5912 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win7
+
+
+
+
+
+3. Windows2008X64SP2
+
+
+qemu-img create -f qcow2 Windows2008X64SP2.qcow2 20G
+
+virt-install --connect qemu:///system \
+--name Windows2008 --ram 4096 \
+--network bridge=br0,model=virtio \
+--disk path=Windows2008X64SP2.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/Windows2008X64SP2.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5903 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win2k8
+
+
+
+
+
+qemu-img create -f qcow2 Windows2008R2STDX64SP1.qcow2 20G
+
+virt-install --connect qemu:///system \
+--name Windows2008 --ram 4096 \
+--network bridge=br0,model=virtio \
+--disk path=Windows2008R2STDX64SP1.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/cn_windows_server_2008_r2_standard_enterprise_datacenter_and_web_with_sp1_x64_dvd_617598.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5933 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win2k8
+
+
+
+
+
+4. Windows2012R2
+
+
+qemu-img create -f qcow2 Windows2012R2.qcow2 20G
+
+virt-install --connect qemu:///system \
+--name Windows2012 --ram 4096 \
+--network bridge=br0,model=virtio \
+--disk path=Windows2012R2.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /osimage/Windows2012R2.iso \
+--disk path=/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--vnc --vncport=5905 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win2k8
+
+
+
+
+virt-install --connect qemu:///system \
+--name MD-US1 --ram 8192 --vcpu 4 \
+--network bridge=qbr110ea33f-00,model=virtio \
+--disk path=/mnt/osd2/osimage/Windows2012R2_md-us1.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom /mnt/osd2/osimage/Windows2012R2.iso \
+--disk path=/mnt/osd2/osimage/virtio-win-0.1-100.iso,device=cdrom \
+--disk path=/mnt/osd2/osimage/cn_sql_server_2008_r2_enterprise_x86_x64_ia64_dvd_522233.iso,device=cdrom \
+--vnc --vncport=5905 --vnclisten=0.0.0.0 -v \
+--os-type windows --os-variant win2k8
+
+
+
+
+
+
+5. CentOS-6.6-x86_64-minimal
+
+
+qemu-img create -f qcow2 /osimage/CentOS-6.6-x86_64-Mini.qcow2 10G
+
+virt-install -n CentOS-6.6-x86_64-Mini -r 2048 \
+-c CentOS-6.6-x86_64-minimal.iso \
+--disk path=/osimage/CentOS-6.6-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=br0 \
+--vnc --vncport=5905 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel6
+
+
+virt-install -n QYYP01 -r 8192 --vcpus=4 \
+-c /osimage2/CentOS-6.6-x86_64-minimal.iso \
+--disk path=/osimage2/CentOS66_QYYP01.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=br1 \
+--vnc --vncport=5911 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel6
+
+
+
+
+
+6. CentOS-6.5-x86_64-minimal
+
+
+qemu-img create -f qcow2 /osimage/CentOS-6.5-x86_64-Mini.qcow2 10G
+
+virt-install -n CentOS-6.5-x86_64-Mini -r 2048 \
+-c CentOS-6.5-x86_64-minimal.iso \
+--disk path=/osimage/CentOS-6.5-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=br0 \
+--vnc --vncport=5906 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel6
+
+
+qemu-img create -f qcow2 /osimage/CentOS-6.5-x86_64-Mini.qcow2 10G
+
+virt-install -n CentOS-6.5-x86_64-Mini -r 8192 --vcpus 4\
+-c CentOS-6.5-x86_64-minimal.iso \
+--disk path=/osimage/CentOS-6.5-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=br0 \
+--vnc --vncport=5906 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel6
+
+
+
+
+
+7. CentOS-6.3-x86_64-minimal
+
+
+qemu-img create -f qcow2 /osimage/CentOS-6.3-x86_64-Mini.qcow2 10G
+
+virt-install -n CentOS-6.3-x86_64-Mini -r 2048 \
+-c CentOS-6.3-x86_64-minimal.iso \
+--disk path=/osimage/CentOS-6.3-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=br0 \
+--vnc --vncport=5907 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel6
+
+
+
+virt-install -n CentOS-6.3-x86_64-qgld_lvm -r 2048 \
+-c CentOS-6.3-x86_64-minimal.iso \
+--disk path=/osimage/CentOS-6.3-qgld_lvm.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network  network=default,model=virtio \
+--vnc --vncport=5923 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel6
+
+
+
+
+
+
+virt-install --connect qemu:///system \
+--name Ubuntu-14.10 --ram 2048 \
+--network bridge=br0,model=virtio \
+--disk path=ubuntu-14.10-server-amd64.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom ubuntu-14.10-server-amd64.iso \
+--vnc --vncport=5903 --vnclisten=0.0.0.0 -v
+
+
+
+
+
+
+virt-install --connect qemu:///system \
+--name Ubuntu-12.04 --ram 2048 \
+--network bridge=br0,model=virtio \
+--disk path=Ubuntu-12.04.5-Server-Amd64.qcow2,format=qcow2,device=disk,bus=virtio \
+--cdrom ubuntu-12.04.5-server-amd64.iso \
+--vnc --vncport=5902 --vnclisten=0.0.0.0 -v
+
+
+
+
+
+
+
+
+  932  virsh undefine CentOS-6.6-x86_64-Mini
+  933  ll
+  934  cd /etc/libvirt/qemu/
+  935  cp CentOS-6.5-x86_64-Mini.xml QYYP01.xml
+  936  vim QYYP01.xml 
+  937  rm -rf QYYP01.xml 
+  938  ll
+  939  cd -
+  940  ll
+  941  rm -rf CentOS66_QYYP01.qcow2
+  942  cp CentOS-6.6-x86_64-Mini.qcow2 CentOS66_QYYP01.qcow2
+  943  qemu-img resize CentOS66_QYYP01.qcow2 +515G
+  944  virt-install -n QYYP01 -r 8192 --vcpus=4 -c /osimage2/CentOS-6.6-x86_64-minimal.iso --disk path=/osimage2/CentOS66_QYYP01.qcow2,device=disk,bus=virtio,format=qcow2 --network bridge=br1 --vnc --vncport=5911 --vnclisten=0.0.0.0 -v --os-type=linux --os-variant=rhel6
+  945  virsh start QYYP01
+  946  virsh list --all
+  947  ll
+  948  cp CentOS66_QYYP01.qcow2 CentOS66_QYYP02.qcow2 
+  949  ll
+  950  history 
+  951  cd /etc/libvirt/qemu/
+  952  ll
+  953  cp QYYP01.xml QYYP02.xml 
+  954  vi QYYP02.xml 
+
+  <name>QYYP02</name>
+  <uuid>26dbfcd2-993a-48ec-9fc6-f94eace9f9bd</uuid>
+      <source file='/osimage2/CentOS66_QYYP02.qcow2'/>
+    <graphics type='vnc' port='5912' autoport='no' listen='0.0.0.0'>
+
+  955  virsh define /etc/libvirt/qemu/QYYP02.xml 
+  956  virsh list --all
+  957  virsh start QYYP02
+  958  history 
+
+
+
+
+
+<domain type='kvm'>
+  <name>Windows7x86-3</name>
+  <uuid>b5833f86-4540-3a92-8489-43c579b712e5</uuid>
+  <memory unit='KiB'>4194304</memory>
+  <currentMemory unit='KiB'>4194304</currentMemory>
+  <vcpu placement='static'>2</vcpu>
+  <os>
+    <type arch='x86_64' machine='rhel6.6.0'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+  <clock offset='localtime'>
+    <timer name='rtc' tickpolicy='catchup'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <devices>
+    <emulator>/usr/libexec/qemu-kvm</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none'/>
+      <source file='/osimage/Windows7Ux86SP1.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </disk>
+    <controller type='usb' index='0' model='ich9-ehci1'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x7'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci1'>
+      <master startport='0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0' multifunction='on'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci2'>
+      <master startport='2'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x1'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci3'>
+      <master startport='4'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x2'/>
+    </controller>
+    <controller type='ide' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+    </controller>
+    <interface type='network'>
+      <mac address='52:54:00:a1:f3:9d'/>
+      <source network='default'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+    </interface>
+    <serial type='pty'>
+      <target port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <input type='tablet' bus='usb'/>
+    <input type='mouse' bus='ps2'/>
+    <graphics type='vnc' port='5921' autoport='no' listen='0.0.0.0'>
+      <listen type='address' address='0.0.0.0'/>
+    </graphics>
+    <video>
+      <model type='vga' vram='9216' heads='1'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+    </video>
+    <memballoon model='virtio'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+    </memballoon>
+  </devices>
+</domain>
+
+
+
+
+    <controller type='usb' index='0' model='ich9-ehci1'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x7'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci1'>
+      <master startport='0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0' multifunction='on'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci2'>
+      <master startport='2'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x1'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci3'>
+      <master startport='4'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x2'/>
+    </controller>
+    <controller type='pci' index='0' model='pci-root'/>
+    <controller type='ide' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+    </controller>
+    <controller type='virtio-serial' index='0'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+    </controller>

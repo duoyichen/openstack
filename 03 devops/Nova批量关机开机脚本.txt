@@ -1,0 +1,77 @@
+注意 source admin 的环境变量，并加上 --all-tenant
+
+
+将openstack平台上运行的云主机批量关机开机，亲测可用:
+
+for i in `nova list --all-tenant | grep Running | awk -F'|' '{print $2}'| sed 's/ //g'`;do nova stop $i;done
+
+for i in `nova list --all-tenant | grep Shutdown | awk -F'|' '{print $2}'| sed 's/ //g'`;do nova start $i;done
+
+
+
+
+
+
+
+将compute1上运行的云主机批量关机
+
+for i in `nova list --host compute2 | grep Running | awk -F'|' '{print $2}'| sed 's/ //g'`
+do
+nova stop $i
+done
+
+
+
+将compute1上关闭的云主机批量开机(有时候需要执行两次才能全部成功)
+
+for i in `nova list --host compute2 | grep Shutdown | awk -F'|' '{print $2}'| sed 's/ //g'`
+do
+nova start $i
+done
+
+
+
+将compute1上运行的云主机批量热迁移到compute3上
+
+for i in `nova list --host compute1 | grep Running | awk -F'|' '{print $2}'| sed 's/ //g'`
+do
+nova live-migration --block-migrate $i compute3
+done
+
+nova live-migration [--block-migrate] [--disk-over-commit]
+                           <server> [<host>]
+
+
+
+host-servers-migrate
+                        Migrate all instances of the specified host to other
+                        available hosts.
+
+
+live-migration
+
+
+
+
+
+批量操作的时候，controller shell，dashboard很卡。
+
+
+
+
+
+
+
+
+
+nova migrate
+nova live-migration
+nova evacuate
+nova host-evacuate:这个没有成功。
+
+nova host-evacuate:也没有问题，带一个参数即可：--on-shared-storag
+
+
+
+
+

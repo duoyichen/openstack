@@ -1,0 +1,89 @@
+Windows 7 用户密码半可控，IP可以由创建云主机的时候设定，主机名，配置（CPU、内存、C盘）等，都不可控，生成云主机的配置都是制作镜像时候的配置，不能根据用户在创建时制定的配置模板自动调整。
+
+Windows 2008 不装装CloudbaseInit时，IP可以由创建云主机的时候设定，用户密码，配置（CPU、内存、C盘）等半可控，主机名不可控。安装CloudbaseInit以后，密码不可控了。
+
+Windows 2012 安装CloudbaseInit以后，用户密码，主机名，配置（CPU、内存、C盘），IP都可以由创建云主机的时候设定，达到完全可控的效果。
+
+
+
+https://help.ubuntu.com/community/CloudInit
+
+http://www.cloudbase.it/cloud-init-for-windows-instances/
+
+http://cloudinit.readthedocs.org/en/latest/index.html
+
+http://blog.csdn.net/weiyuanke/article/details/23789069
+
+https://launchpad.net/cloud-init/
+
+http://www.chenshake.com/about-openstack-centos-mirror/
+
+
+
+
+
+
+
+
+
+
+通过VMWare的vdiskmanager镜像转换：
+
+vmware-vdiskmanager.exe -r win2k3_ent_ch_sp2.vmdk -t 0 win2k3.vmdk
+qemu-img convert -f vmdk  -O qcow2 win2k3.vmdk  win2k3.qcow2
+
+
+
+虚拟环境安装：
+
+yum install -y vncviewer kvm qemu-kvm
+
+镜像制作的一些工具
+yum install -y libguestfs libguestfs-tools
+
+
+
+
+guestfish套件安装非常简单，一条命令就可以。
+yum install libguestfs-tools
+注意：默认安装是不安装windows系 统支持的，如果需要修改windows系统镜像，需要再运行如下命令。
+yum install libguestfs-winsupport
+
+
+以可读写方式将Windows镜像挂载到/mnt目录
+
+guestfish --rw -a Windows7Ux64SP1.qcow2
+><fs> run
+><fs> list-partitions 
+/dev/sda1
+><fs> q
+
+guestmount -a Windows7Ux64SP1.qcow2 -m /dev/sda1 --rw /mnt
+
+cd /mnt
+
+vim etc/sysconfig/network-scripts/ifcfg-eth0
+
+umount /mnt
+
+
+
+
+
+
+
+虚拟机的管理：
+
+vncview 172.16.39.111:5900
+
+virt-viewer 打开控制台连上 FreeBSD 的安装界面：
+virt-viewer freebsd
+
+
+virsh start CentOSimg
+virsh destroy CentOSimg
+
+virsh --connect qemu:///system
+start Windows7
+
+

@@ -1,0 +1,145 @@
+创建public网络
+
+
+source keystonerc_admin
+
+neutron net-create public --router:external True \
+--provider:physical_network external --provider:network_type flat
+
+neutron subnet-create public --name public-subnet \
+--allocation-pool start=10.0.38.11,end=10.0.38.111 \
+--disable-dhcp --gateway 10.0.0.1 10.0.38.0/16 \
+--dns-nameserver 10.0.0.1 \
+--dns-nameserver 8.8.8.8
+
+
+
+
+
+创建demo用户
+
+keystone tenant-create --name demo --description "demo tenant"
+keystone user-create --name demo --tenant demo --pass DEMO_PASS_SUR --email demo@example.com
+
+
+
+生成demo环境变量
+
+cat > keystonerc_demo <<eof
+export OS_USERNAME=demo
+export OS_PASSWORD=DEMO_PASS_SUR
+export OS_TENANT_NAME=demo
+#export OS_AUTH_URL=http://controller:35357/v2.0
+export OS_AUTH_URL=http://controller:5000/v2.0
+eof
+
+
+创建demo网络环境
+
+source keystonerc_demo
+
+neutron net-create demo-net
+
+neutron subnet-create demo-net --name demo-subnet \
+--gateway 10.1.1.1 10.1.1.0/24 \
+--dns-nameserver 8.8.4.4 \
+--dns-nameserver 1.2.4.8 \
+--dns-nameserver 114.114.114.114
+
+neutron router-create demo-router
+neutron router-interface-add demo-router demo-subnet
+neutron router-gateway-set demo-router public
+
+nova keypair-add --pub-key ~/.ssh/id_rsa.pub demo-key
+
+
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule default tcp 3389 3389 0.0.0.0/0
+
+
+
+
+
+
+
+
+添加租户脚本：
+
+
+
+keystone tenant-create --name sursen --description "sursen tenant"
+keystone user-create --name sursen --tenant sursen --pass sursen@2015 --email sursen@example.com
+
+
+mkdir -p /etc/tenant/
+
+cat > /etc/tenant/sursen-openrc.sh <<eof
+export OS_USERNAME=sursen
+export OS_PASSWORD=sursen@2015
+export OS_TENANT_NAME=sursen
+#export OS_AUTH_URL=http://controller:35357/v2.0
+export OS_AUTH_URL=http://10.10.100.62:5000/v2.0
+eof
+
+source /etc/tenant/sursen-openrc.sh
+
+
+neutron net-create sursen-net
+
+neutron subnet-create sursen-net --name sursen-subnet \
+--gateway 10.1.1.1 10.1.1.0/24 \
+--dns-nameserver 8.8.4.4 \
+--dns-nameserver 1.2.4.8 \
+--dns-nameserver 114.114.114.114
+
+neutron router-create sursen-router
+neutron router-interface-add sursen-router sursen-subnet
+neutron router-gateway-set sursen-router public
+
+nova keypair-add --pub-key ~/.ssh/id_rsa.pub sursen-key
+
+
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+nova secgroup-add-rule default tcp 3389 3389 0.0.0.0/0
+
+
+
+
+
+
+source keystonerc_admin 
+nova flavor-create --is-public True m1.medium2 6 4096 100 4
++----+------------+-----------+------+-----------+------+-------+-------------+-----------+
+| ID | Name       | Memory_MB | Disk | Ephemeral | Swap | VCPUs | RXTX_Factor | Is_Public |
++----+------------+-----------+------+-----------+------+-------+-------------+-----------+
+| 6  | m1.medium2 | 4096      | 100  | 0         |      | 4     | 1.0         | True      |
++----+------------+-----------+------+-----------+------+-------+-------------+-----------+
+
+
+
+
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_SUR
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'MYSQL_ROOT_PASS_SUR' WITH GRANT OPTION;
+FLUSH privileges;
+exit;
+
+
+
+常用命令行API
+
+上传镜像：
+ssh controller
+source /etc/admin-openrc.sh
+glance image-create --name "Windows2008X64SP2" \
+--disk-format raw --container-format bare \
+--is-public True --progress < Windows2008X64SP2.raw
+
+打开云平台租户的3389端口：
+ssh controller
+source /etc/admin-openrc.sh
+nova secgroup-add-rule default tcp 3389 3389 0.0.0.0/0
+

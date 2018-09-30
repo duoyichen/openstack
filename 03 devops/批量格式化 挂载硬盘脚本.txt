@@ -1,0 +1,16 @@
+
+
+
+
+
+
+for i in b;do sudo mkfs.ext3 /dev/vd$i;\
+sudo mkdir -p /vd$i;sudo mount /dev/vd$i /vd$i;\
+sudo touch /vd$i/------Iam$i------;sudo echo $'\n';sudo ls /vd$i;done
+
+
+for i in b c d e f g h i;do sudo echo $'\n';sudo ls /vd$i;done
+
+
+for i in b c d e f g h i;do sudo umount /vd$i;done
+

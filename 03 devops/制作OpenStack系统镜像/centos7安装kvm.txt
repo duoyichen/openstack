@@ -1,0 +1,24 @@
+yum -y install qemu-kvm libvirt virt-install bridge-utils
+lsmod | grep kvm
+systemctl start libvirtd
+systemctl enable libvirtd
+
+cat /etc/sysconfig/network-scripts/ifcfg-br0
+TYPE=Bridge
+BOOTPROTO=none
+DEVICE=br0
+ONBOOT=yes
+IPADDR0=192.168.0.102
+PREFIX0=24
+GATEWAY0=192.168.0.1
+
+
+cat /etc/sysconfig/network-scripts/ifcfg-enp3s0
+DEVICE=enp3s0
+TYPE=Ethernet
+ONBOOT=yes
+BRIDGE=br0
+
+reboot
+
+ifconfig

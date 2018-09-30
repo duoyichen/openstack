@@ -1,0 +1,27 @@
+通过注入脚本修改用户密码及开SSH
+
+Ubuntu镜像启用root及ssh登录
+
+#!/bin/sh
+passwd root<<EOF
+2015SS@cloud
+2015SS@cloud
+EOF
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/g' /etc/ssh/sshd_config
+service ssh restart
+
+
+
+
+
+CentOS
+
+#!/bin/sh
+passwd root<<EOF
+surdoc
+surdoc
+EOF
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/g' /etc/ssh/sshd_config
+service sshd restart

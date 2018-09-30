@@ -1,0 +1,8 @@
+cat > powershell.txt <<eof
+
+C:\powershell
+C:\Set-ExecutionPolicy Unrestricted
+C:\Invoke-WebRequest -UseBasicParsing http://www.cloudbase.it/downloads/CloudbaseInitSetup_Beta_x64.msi -OutFile cloudbaseinit.msi
+C:\.\cloudbaseinit.msi
+
+eof

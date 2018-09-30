@@ -1,0 +1,7 @@
+/usr/libexec/qemu-kvm -name TestKVM -m 2048 -smp 2,sockets=2,cores=2,threads=1 -drive file=/osimage/CentOS-6.5.qcow2,if=virtio -boot d --net bridge=br1 -vnc :33
+
+virt-install -n CentOS-6.5 -r 2048 -c CentOS-6.5-x86_64-minimal.iso --disk path=/osimage2/CentOS-6.5-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 --network bridge=br1 --vnc --vncport=5902 --vnclisten=0.0.0.0 -v --os-type=linux --os-variant=rhel6
+
+
+
+kvm -m 1024 -cdrom virtio-win-0.1-59.iso -drive file=windowsxp.img,if=virtio,boot=on -net nic,model=virtio -boot d -nographic -net user -usb -usbdevice tablet -vnc :0
