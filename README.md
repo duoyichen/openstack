@@ -305,20 +305,20 @@ systemctl enable ntpd.service<br>
 systemctl start ntpd.service<br>
 
 将controller节点作为ntp服务器：<br>
-sed -i '/ 3.centos.pool.ntp.org /a\<br>
-restrict -4 default kod notrap nomodify\<br>
+sed -i '/ 3.centos.pool.ntp.org /a\ <br>
+restrict -4 default kod notrap nomodify\ <br>
 restrict -6 default kod notrap nomodify' /etc/ntp.conf<br>
 
 2.1.3  安装数据库并初始化<br>
 
 yum install -y mariadb mariadb-server MySQL-python<br>
 
-sed -i '/symbolic-links=0/a\bind-address = 0.0.0.0\<br>
-default-storage-engine = innodb\<br>
-innodb_file_per_table\<br>
-collation-server = utf8_general_ci\<br>
-init-connect = "SET NAMES utf8"\<br>
-character-set-server = utf8' /etc/my.cnf<br>
+sed -i '/symbolic-links=0/a\bind-address = 0.0.0.0\ <br>
+default-storage-engine = innodb\ <br>
+innodb_file_per_table\ <br>
+collation-server = utf8_general_ci\ <br>
+init-connect = "SET NAMES utf8"\ <br>
+character-set-server = utf8' /etc/my.cnf <br>
 
 systemctl enable mariadb.service<br>
 systemctl start mariadb.service<br>
