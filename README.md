@@ -7,7 +7,7 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
 * 01 installation 关于安装配置<br>
 * 02 deploy 第三方部署工具<br>
 * 03 devops 关于运维和开发
-* 04 cloudstack 其他云平台
+* 04 cloudstack 一款基于Java开发的云平台
 
 
 
