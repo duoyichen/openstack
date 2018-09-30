@@ -1,11 +1,12 @@
-# OpenStack
+# OpenStack Platform
 
 
 <br>
 OpenStack的安装部署，运维排错，以及平台开发等相关文档。文档比较多，有点乱，归类了一下：<br>
-*  01 installation 关于安装配置<br>
-*  02 deploy 第三方部署工具<br>
-*  03 devops 关于运维和开发
+
+* 01 installation 关于安装配置<br>
+* 02 deploy 第三方部署工具<br>
+* 03 devops 关于运维和开发
 
 
 
