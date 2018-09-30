@@ -1,0 +1,71 @@
+关于OpenStack Instance Resize SSH 的问题
+
+
+
+
+
+su - nova
+ssh-keygen
+一路回车
+
+
+ssh-copy-id nova@controller
+ssh-copy-id nova@compute1
+ssh-copy-id nova@compute2
+
+
+
+修改 nova.conf 的
+
+scheduler_default_filters=AllHostsFilter
+
+allow_resize_to_same_host=ture
+
+允许resize的时候不迁移
+
+
+要扩展配置，就要在每个compute之间，两两做nova免登陆操作
+
+
+usermod -s /bin/bash nova
+
+cat /etc/passwd|grep nova
+
+su - nova
+
+#mkdir .ssh
+#cd .ssh
+
+ssh-keygen
+exit
+
+
+scp /var/lib/nova/.ssh/id_rsa.pub 10.0.33.31:/var/lib/nova/.ssh/authorized_keys
+
+su - nova
+ssh 10.0.33.31
+
+
+
+[root@controller ~]# nova resize --poll R 2
+
+Server resizing... 100% complete
+Finished
+
+
+
+[root@controller ~]# nova help resize
+usage: nova resize [--poll] <server> <flavor>
+
+Resize a server.
+
+Positional arguments:
+  <server>  Name or ID of server.
+  <flavor>  Name or ID of new flavor.
+
+Optional arguments:
+  --poll    Report the server resize progress until it completes.
+
+
+
+
