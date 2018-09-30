@@ -45,9 +45,9 @@ OpenStack版本：Juno版<br>
 ### 1.5  节点网络规划
 
 
-<table border=3>
+<table>
     <tr>
-        <td colspan=7>云平台网络与服务器网卡对应表</td>
+        <td colspan=7 align="center">云平台网络与服务器网卡对应表</td>
     </tr>
     <tr>
         <td>交换机端口</td>
