@@ -1,0 +1,187 @@
+#!/bin/sh
+
+###### Please Set the Variable ######
+node_num="62"
+destination_directory="/root/rpm"
+local_directory="/root/rpm"
+eth_num=5
+ip=`expr ${node_num} - 48`
+want_continue="no"
+
+echo ""
+echo ""
+echo "------------------------------------------------"
+echo ""
+printf "Please input \33[;31mNode Number:\33[0m(default is "$node_num"):"
+read node_num_input
+if [ "$node_num_input" != "" ]
+then
+node_num=$node_num_input
+fi
+
+echo ""
+printf "Please input \33[;31mDestination Directory:\33[0m(default is "$destination_directory"):"
+read destination_directory_input
+if [ "$destination_directory_input" != "" ]
+then
+destination_directory=$destination_directory_input
+fi
+
+echo ""
+printf "Please input \33[;31mLocal Directory:\33[0m(default is "$local_directory"):"
+read local_directory_input
+if [ "$local_directory_input" != "" ]
+then
+local_directory=$local_directory_input
+fi
+
+echo ""
+printf "Please input \33[;31methx's Number:\33[0m(default is "$eth_num"):"
+read eth_num_input
+if [ "$eth_num_input" != "" ]
+then
+eth_num=$eth_num_input
+fi
+
+echo ""
+echo ""
+echo ""
+printf "\33[;31mInput [no|NO] for Exit and Press [any Key] for Continue:\33[0m"
+read want_continue
+echo "Your Input is: ${want_continue}"
+case "${want_continue}" in
+no|NO|No|nO)
+echo "The End";
+exit 33
+;;
+*)
+echo "Continue...";
+;;
+esac
+
+
+###### scp and install RPMs ######
+echo ""
+echo ""
+echo "------------------------------------------------"
+echo ""
+echo "Test Destination Directory..."
+ssh node-${node_num} "if [ ! -d ${destination_directory} ];then echo "Destination Directory not exist, Make it";mkdir -p ${destination_directory};else echo "Destination Directory is OK";fi"
+
+echo ""
+echo "Copy files..."
+scp ${local_directory}/*.rpm node-${node_num}:${destination_directory}
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "Copy Finished";else echo -e "\033[31mCopy Failed, Please check it\033[0m";fi
+
+echo ""
+echo "Installing RPMs, Please waiting waiting and waiting ......"
+echo "......"
+ssh node-${node_num} "cd ${destination_directory};rpm -ivh *.rpm"
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "Install Finished";else echo -e "\033[31mInstall Failed or already installed, Please check it\033[0m";fi
+
+echo ""
+echo ""
+echo ""
+printf "\33[;31mInput [no|NO] for Exit and Press [any Key] for Continue:\33[0m"
+read want_continue
+echo "Your Input is: ${want_continue}"
+case "${want_continue}" in
+no|NO|No|nO)
+echo "The End";
+exit 33
+;;
+*)
+echo "Continue...";
+;;
+esac
+
+###### Modify the Cluster Network ######
+echo ""
+echo ""
+echo "------------------------------------------------"
+echo ""
+echo "Modify the Cluster Network..."
+ssh node-${node_num} "ovs-vsctl add-br br-clusternet"
+ssh node-${node_num} "ovs-vsctl add-port br-clusternet br-storage-clusternet"
+ssh node-${node_num} "ovs-vsctl add-port br-eth${eth_num} br-eth${eth_num}--br-clusternet"
+ssh node-${node_num} "ovs-vsctl set port br-eth${eth_num}--br-clusternet tag=2000"
+ssh node-${node_num} "ovs-vsctl set interface br-eth${eth_num}--br-clusternet type=patch options:peer="br-storage-clusternet""
+ssh node-${node_num} "ovs-vsctl set interface br-storage-clusternet type=patch options:peer="br-eth${eth_num}--br-clusternet""
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "Modify the Cluster Network Successful";else echo -e "\033[31mModify the Cluster Network Failed\033[0m";fi
+
+echo ""
+echo "Modify the br-clusternet..."
+ssh node-${node_num} "echo 'DEVICE=br-clusternet' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo "IPADDR=10.30.60.${ip}" >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo 'NETMASK=255.255.255.0' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo 'BOOTPROTO=none' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo 'ONBOOT=yes' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo 'USERCTL=no' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo 'RESOLV_MODS=no' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+ssh node-${node_num} "echo 'PEERDNS=no' >> /etc/sysconfig/network-scripts/ifcfg-br-clusternet"
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "Modify the br-clusternet Successful";else echo -e "\033[31mModify the br-clusternet Failed\033[0m";fi
+
+echo ""
+echo "ifup the br-clusternet..."
+ssh node-${node_num} "ifup br-clusternet"
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "The br-clusternet is UP";else echo -e "\033[31mifup The br-clusternet Failed\033[0m";fi
+ssh node-${node_num} "ping -c 3 10.30.60.3"
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "br-clusternet is Connection";else echo -e "\033[31mbr-clusternet is not Connection\033[0m";fi
+
+echo ""
+echo ""
+echo ""
+printf "\33[;31mInput [no|NO] for Exit and Press [any Key] for Continue:\33[0m"
+read want_continue
+echo "Your Input is: ${want_continue}"
+case "${want_continue}" in
+no|NO|No|nO)
+echo "The End";
+exit 33
+;;
+*)
+echo "Continue...";
+;;
+esac
+
+
+###### Modify the ceph.conf ######
+echo ""
+echo ""
+echo "------------------------------------------------"
+echo ""
+echo "Modify the ceph.conf"
+ssh node-${node_num} "scp /etc/ceph/ceph.conf /etc/ceph/ceph.conf.bak`date +%Y%m%d%H%M%S`"
+ssh node-${node_num} "sed -i 's/cluster_network/#cluster_network/' /etc/ceph/ceph.conf"
+ssh node-${node_num} "sed -i "/#cluster_network/a\cluster_network = 10.30.60.${ip}/24" /etc/ceph/ceph.conf"
+ssh node-${node_num} "grep "10.30.60.${ip}" /etc/ceph/ceph.conf"
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo "ceph.conf is OK";/etc/init.d/ceph restart;else echo -e "\033[31mceph.conf Failed, Please check it\033[0m";fi
+
+echo ""
+echo ""
+echo ""
+printf "\33[;31mInput [no|NO] for Exit and Press [any Key] for Continue:\33[0m"
+read want_continue
+echo "Your Input is: ${want_continue}"
+case "${want_continue}" in
+no|NO|No|nO)
+echo "The End";
+exit 33
+;;
+*)
+echo "Continue...";
+;;
+esac
+
+
+###### Modify the GRUB and Reboot ######
+echo ""
+echo ""
+echo "------------------------------------------------"
+echo ""
+echo -e "\033[31mModify the GRUB and Reboot...\033[0m"
+ssh node-${node_num} "scp /boot/grub/menu.lst /boot/grub/menu.lst.bak`date +%Y%m%d%H%M%S`"
+ssh node-${node_num} "sed -i 's/default=/#default=/' /boot/grub/menu.lst"
+ssh node-${node_num} "sed -i '/#default=/a\default=0' /boot/grub/menu.lst"
+ssh node-${node_num} "grep default=0 /boot/grub/menu.lst"
+if [ `ssh node-${node_num} "echo $?"` == 0 ];then echo -e "\033[31mModify the GRUB Successful, and System will reboot\033[0m";reboot;else echo -e "\033[31mModify the GRUB Failed, Please check it\033[0m";fi
