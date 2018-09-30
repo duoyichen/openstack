@@ -245,64 +245,64 @@ NETMASK=255.255.255.0<br>
 DEFROUTE=no<br>
 eof<br>
 
-cat > /etc/sysconfig/network-scripts/ifcfg-eth2 <<eof
-TYPE=Ethernet
-BOOTPROTO=static
-NAME=eth2
-DEVICE=eth2
-ONBOOT=yes
-IPADDR=172.16.33.11
-NETMASK=255.255.255.0
-DEFROUTE=no
-eof
+cat > /etc/sysconfig/network-scripts/ifcfg-eth2 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=static<br>
+NAME=eth2<br>
+DEVICE=eth2<br>
+ONBOOT=yes<br>
+IPADDR=172.16.33.11<br>
+NETMASK=255.255.255.0<br>
+DEFROUTE=no<br>
+eof<br>
 
-cat > /etc/sysconfig/network-scripts/ifcfg-eth3 <<eof
-TYPE=Ethernet
-BOOTPROTO=none
-NAME=eth3
-DEVICE=eth3
-ONBOOT=yes
-eof
+cat > /etc/sysconfig/network-scripts/ifcfg-eth3 <<eof<br>
+TYPE=Ethernet<br>
+BOOTPROTO=none<br>
+NAME=eth3<br>
+DEVICE=eth3<br>
+ONBOOT=yes<br>
+eof<br>
 
-echo 'nameserver 10.0.0.1' > /etc/resolv.conf
-echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
-echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
+echo 'nameserver 10.0.0.1' > /etc/resolv.conf<br>
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf<br>
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf<br>
 
-systemctl disable NetworkManager
+systemctl disable NetworkManager<br>
 
-systemctl stop NetworkManager
+systemctl stop NetworkManager<br>
 
-systemctl disable firewalld
-systemctl stop firewalld
+systemctl disable firewalld<br>
+systemctl stop firewalld<br>
 
-systemctl disable postfix
-systemctl stop postfix
+systemctl disable postfix<br>
+systemctl stop postfix<br>
 
-sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
-setenforce 0
-
-
-hostnamectl --static set-hostname controller
-
-cat > /etc/hosts <<eof
-# compute3
-10.0.33.33       compute3
-# compute2
-10.0.33.32       compute2
-# compute1
-10.0.33.31       compute1
-# controller
-10.0.33.11       controller
-eof
-
-init 6
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config<br>
+setenforce 0<br>
 
 
-2.1.2  安装 ntp 服务，各节点之间时间要同步。
+hostnamectl --static set-hostname controller<br>
 
-yum install -y ntp
-systemctl enable ntpd.service
-systemctl start ntpd.service
+cat > /etc/hosts <<eof<br>
+\# compute3<br>
+10.0.33.33       compute3<br>
+\# compute2<br>
+10.0.33.32       compute2<br>
+\# compute1<br>
+10.0.33.31       compute1<br>
+\# controller<br>
+10.0.33.11       controller<br>
+eof<br>
+
+init 6<br>
+<br>
+
+2.1.2  安装 ntp 服务，各节点之间时间要同步。<br>
+
+yum install -y ntp<br>
+systemctl enable ntpd.service<br>
+systemctl start ntpd.service<br>
 
 将controller节点作为ntp服务器：
 sed -i '/ 3.centos.pool.ntp.org /a\
