@@ -1,0 +1,64 @@
+
+
+mount -t nfs 10.10.50.60:/export/primary /mnt/primary
+mount -t nfs 10.10.50.60:/export/secondary /mnt/secondary
+df
+
+
+
+IPv4 DNS1:
+202.106.195.68
+114.114.114.114
+Internal DNS 1:
+10.10.255.254
+
+Guest CIDR:
+10.1.1.0/24
+
+PUBLIC TRAFFIC
+10.10.255.254
+255.255.0.0
+500
+10.10.50.111
+10.10.50.222
+
+POD
+10.10.255.254
+255.255.0.0
+10.10.50.223
+10.10.50.252
+
+GUEST TRAFFIC
+501
+530
+
+Host
+10.10.50.61
+root
+12345678
+
+Guest
+10.1.1.0/24
+10.1.1.1
+255.255.255.0
+10.1.1.111
+10.1.1.222
+
+
+Primary
+mount -t nfs 10.10.50.60:/export/primary /mnt/primary
+Secondary
+mount -t nfs 10.10.50.60:/export/secondary /mnt/secondary
+
+
+
+cloudstack-setup-databases cloud:cloud@localhost --deploy-as=root:password -r 2
+
+mysqldump -u root -p<mysql_password> -h <region1_db_host> cloud account user domain
+> region1.sql
+
+mysql -u root -p<mysql_password> -h <region2_db_host> cloud < region1.sql
+
+mysql> delete from account where type = 5;
+
+update account set default_zone_id = null;

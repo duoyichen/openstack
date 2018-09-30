@@ -1,0 +1,124 @@
+Using a Separate NFS Server
+
+
+
+tar zxvf CloudPlatform-4.2.1-3-rhel6.4.tar.gz
+cd CloudPlatform-4.2.1-3-rhel6.4
+./install.sh
+A
+
+yum install nfs-utils rpcbind
+
+
+service rpcbind start
+service nfs start
+chkconfig nfs on
+chkconfig rpcbind on
+
+mkdir -p /export/primary
+mkdir -p /export/secondary
+
+echo "/export *(rw,async,no_root_squash)" >> /etc/exports
+exportfs -a
+
+showmount -e
+
+
+
+
+On the management server, create a mount point for secondary storage. For example:
+
+mkdir -p /mnt/secondary
+mount -t nfs 10.10.50.61:/export/secondary /mnt/secondary
+#echo "10.10.50.61:/export/secondary  /mnt/secondary               nfs     defaults        0 0" >>  /etc/rc.local
+echo "10.10.50.61:/export/secondary  /mnt/secondary               nfs     defaults        0 0" >>  /etc/fstab
+
+
+#echo "10.10.33.10:/var/www/html/o  /var/www/html/o               nfs     defaults        0 0" >>  /etc/fstab
+echo "mount -t nfs 10.10.33.10:/var/www/html/o /var/www/html/o" >>  /etc/rc.d/rc.local
+
+
+
+
+
+
+
+
+
+
+
+
+先启动CloudStack服务：
+
+1	server cloudstack-management restart restart
+启动CloudStack服务需要花点时间，这期间你可以查看下它的日志，确保它正常启动：
+
+1	tail -100f  /var/log/cloudstack/management/catalina.out
+一般情况下，它会正常启动。如果启动时报权限问题，一般是因为 cloud用户没有/var/log/cloudstack/management/ 写入权限导致。
+
+1	chown cloud /var/log/cloudstack/ -R
+
+
+
+
+
+
+
+
+
+On the Management Server host
+
+mkdir -p /export/primary
+mkdir -p /export/secondary
+
+vi /etc/exports
+
+/export *(rw,async,no_root_squash)
+
+3. Export the /export directory.
+exportfs -a
+
+4. Edit the /etc/sysconfig/nfs file.
+vi /etc/sysconfig/nfs
+Uncomment the following lines:
+LOCKD_TCPPORT=32803
+LOCKD_UDPPORT=32769
+MOUNTD_PORT=892
+RQUOTAD_PORT=875
+STATD_PORT=662
+STATD_OUTGOING_PORT=2020
+
+sed -i s/#LOCKD_TCPPORT=32803/LOCKD_TCPPORT=32803/  /etc/sysconfig/nfs
+sed -i s/#LOCKD_UDPPORT=32769/LOCKD_UDPPORT=32769/  /etc/sysconfig/nfs
+sed -i s/#MOUNTD_PORT=892/MOUNTD_PORT=892/  /etc/sysconfig/nfs
+sed -i s/#RQUOTAD_PORT=875/RQUOTAD_PORT=875/ /etc/sysconfig/nfs
+sed -i s/#STATD_PORT=662/STATD_PORT=662/  /etc/sysconfig/nfs
+sed -i s/#STATD_OUTGOING_PORT=2020/STATD_OUTGOING_PORT=2020/  /etc/sysconfig/nfs
+
+service rpcbind start
+service nfs start
+chkconfig nfs on
+chkconfig rpcbind on
+reboot
+
+
+
+c. Log back in to the hypervisor host and try to mount the /export directories. For example
+(substitute your own management server name):
+
+mkdir /primarymount
+mount -t nfs 10.10.50.60:/export/primary /primarymount
+umount /primarymount
+mkdir /secondarymount
+mount -t nfs 10.10.50.60:/export/secondary /secondarymount
+umount /secondarymount
+
+
+
+
+
+
+
+
+
+

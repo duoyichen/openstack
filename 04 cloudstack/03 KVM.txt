@@ -1,0 +1,29 @@
+yum erase qemu-kvm
+
+grep -E '(vmx|svm)' /proc/cpuinfo
+egrep '^flags.*(vmx|svm)' /proc/cpuinfo
+
+tar zxvf CloudPlatform-4.2.1-3-rhel6.4.tar.gz
+cd CloudPlatform-4.2.1-3-rhel6.4
+./install.sh
+A
+
+
+service rpcbind start
+service nfs start
+chkconfig nfs on
+chkconfig rpcbind on
+
+lsmod | grep kvm
+
+
+
+
+
+
+
+
+
+
+
+

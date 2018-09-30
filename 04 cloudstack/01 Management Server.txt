@@ -1,0 +1,295 @@
+Management Server
+
+
+
+
+
+echo "NETWORKING=yes" > /etc/sysconfig/network
+echo "NETWORKING_IPV6=no" >> /etc/sysconfig/network
+echo "HOSTNAME=cloudstack.duoyichen.com" >> /etc/sysconfig/network
+sed -i 's/HOSTNAME=cloudstack.duoyichen.com/HOSTNAME=cloudstack1.duoyichen.com/g' /etc/sysconfig/network
+sed -i 's/HOSTNAME=cloudstack.duoyichen.com/HOSTNAME=cloudstack2.duoyichen.com/g' /etc/sysconfig/network
+sed -i 's/HOSTNAME=cloudstack.duoyichen.com/HOSTNAME=cloudstack3.duoyichen.com/g' /etc/sysconfig/network
+sed -i 's/HOSTNAME=cloudstack.duoyichen.com/HOSTNAME=cloudstack4.duoyichen.com/g' /etc/sysconfig/network
+
+echo "10.10.50.60 cloudstack.duoyichen.com" >> /etc/hosts
+echo "10.10.50.61 cloudstack1.duoyichen.com" >> /etc/hosts
+echo "10.10.50.62 cloudstack2.duoyichen.com" >> /etc/hosts
+echo "10.10.50.63 cloudstack3.duoyichen.com" >> /etc/hosts
+
+hostname --fqdn
+
+service iptables stop
+chkconfig iptables off
+getenforce
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+sed -i 's/SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+setenforce 0
+
+vi /etc/yum.repos.d/rhel6.repo
+[rhel]
+name=rhel6
+baseurl=file:///root/CloudPlatform-4.2.1-3-rhel6.4
+# baseurl=http://10.10.50.60/cloudstack/
+# baseurl=http://cloudstack.apt-get.eu/rhel/4.2/
+enabled=1
+gpgcheck=0
+
+yum install -y ntp
+
+sed -i 's/server 0.centos.pool.ntp.org iburst/server 0.xenserver.pool.ntp.org/g' /etc/ntp.conf
+sed -i 's/server 1.centos.pool.ntp.org iburst/server 1.xenserver.pool.ntp.org/g' /etc/ntp.conf
+sed -i 's/server 2.centos.pool.ntp.org iburst/server 2.xenserver.pool.ntp.org/g' /etc/ntp.conf
+sed -i 's/server 3.centos.pool.ntp.org iburst/server 3.xenserver.pool.ntp.org/g' /etc/ntp.conf
+
+service ntpd restart
+chkconfig ntpd on
+
+
+
+tar zxvf CloudPlatform-4.2.1-3-rhel6.4.tar.gz
+cd CloudPlatform-4.2.1-3-rhel6.4
+./install.sh
+M
+
+service rpcbind start
+service nfs start
+chkconfig nfs on
+chkconfig rpcbind on
+
+每个NFS上设置：
+vi /etc/idmapd.conf
+sed -i 's/#Domain = local.domain.edu/Domain = duoyichen.com/' /etc/idmapd.conf
+
+./install.sh
+D
+
+vi /etc/my.cnf
+innodb_rollback_on_timeout=1
+innodb_lock_wait_timeout=600
+max_connections=350
+log-bin=mysql-bin
+binlog-format = 'ROW'
+
+
+sed -i '/datadir=/s/$/\ninnodb_rollback_on_timeout=1\ninnodb_lock_wait_timeout=600\nmax_connections=350\nlog-bin=mysql-bin\nbinlog-format = 'ROW'/' /etc/my.cnf
+
+
+service mysqld restart
+mysql -u root
+SET PASSWORD = PASSWORD('password');
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+exit
+
+service mysqld restart
+
+iptables -I INPUT -p tcp --dport 3306 -j ACCEPT
+Edit the /etc/sysconfig/iptables file and add the following line at the beginning of the INPUT chain.
+vi /etc/sysconfig/iptables
+-A INPUT -p tcp --dport 3306 -j ACCEPT
+
+
+
+cloudstack-setup-databases cloud:cloud@localhost --deploy-as=root:password
+cloudstack-setup-management
+
+service cloudstack-management status
+service cloudstack-management restart
+
+
+
+
+
+
+
+5.4.7.2. Using the Management Server As the NFS Server
+
+mkdir -p /export/primary
+mkdir -p /export/secondary
+
+echo "/export *(rw,async,no_root_squash)" >> /etc/exports
+exportfs -a
+
+sed -i s/#LOCKD_TCPPORT=32803/LOCKD_TCPPORT=32803/  /etc/sysconfig/nfs
+sed -i s/#LOCKD_UDPPORT=32769/LOCKD_UDPPORT=32769/  /etc/sysconfig/nfs
+sed -i s/#MOUNTD_PORT=892/MOUNTD_PORT=892/  /etc/sysconfig/nfs
+sed -i s/#RQUOTAD_PORT=875/RQUOTAD_PORT=875/ /etc/sysconfig/nfs
+sed -i s/#STATD_PORT=662/STATD_PORT=662/  /etc/sysconfig/nfs
+sed -i s/#STATD_OUTGOING_PORT=2020/STATD_OUTGOING_PORT=2020/  /etc/sysconfig/nfs
+
+Edit the /etc/sysconfig/iptables file.Add the following lines at the beginning of the INPUT chain:
+vi /etc/sysconfig/iptables
+-A INPUT -m state --state NEW -p udp --dport 111 -j ACCEPT
+-A INPUT -m state --state NEW -p tcp --dport 111 -j ACCEPT
+-A INPUT -m state --state NEW -p tcp --dport 2049 -j ACCEPT
+-A INPUT -m state --state NEW -p tcp --dport 32803 -j ACCEPT
+-A INPUT -m state --state NEW -p udp --dport 32769 -j ACCEPT
+-A INPUT -m state --state NEW -p tcp --dport 892 -j ACCEPT
+-A INPUT -m state --state NEW -p udp --dport 892 -j ACCEPT
+-A INPUT -m state --state NEW -p tcp --dport 875 -j ACCEPT
+-A INPUT -m state --state NEW -p udp --dport 875 -j ACCEPT
+-A INPUT -m state --state NEW -p tcp --dport 662 -j ACCEPT
+-A INPUT -m state --state NEW -p udp --dport 662 -j ACCEPT
+
+service iptables restart
+service iptables save
+
+service rpcbind start
+service nfs start
+chkconfig nfs on
+chkconfig rpcbind on
+
+showmount -e
+
+reboot
+
+
+mkdir -p /mnt/primary
+mkdir -p /mnt/secondary
+mount -t nfs 10.10.50.60:/export/primary /mnt/primary
+mount -t nfs 10.10.50.60:/export/secondary /mnt/secondary
+df
+
+192.168.1.118:/export/primary  /primary                nfs     defaults        0 0
+10.10.50.60:/export/secondary  /mnt/secondary               nfs     defaults        0 0
+ 
+mount –a      /etc/rc.local
+
+
+
+
+5.4.10. Prepare the System VM Template
+
+
+#For XenServer:
+/usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt -m /mnt/secondary -u http://download.cloud.com/templates/4.2/systemvmtemplate-2013-07-12-master-xen.vhd.bz2 -h xenserver -s  -F
+
+#For vSphere:
+/usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt -m /mnt/secondary -u http://download.cloud.com/templates/4.2/systemvmtemplate-4.2-vh7.ova -h vmware -s  -F
+
+#For KVM:
+/usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt -m /mnt/secondary -u http://download.cloud.com/templates/4.2/systemvmtemplate-2013-06-12-master-kvm.qcow2.bz2 -h kvm -s  -F
+
+/usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt -m /mnt/secondary -u http://10.10.50.62/cloudstack/systemvmtemplate-2013-06-12-master-kvm.qcow2.bz2 -h kvm -s  -F
+
+
+
+当然，你也可以把文件下载到本地，然后用 -f 参数导入。如：
+/usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt -m /mnt/secondary -f /root/systemvmtemplate-2013-06-12-master-kvm.qcow2.bz2 -h kvm -s  -F
+
+
+
+If you are using a separate NFS server, perform this step. If you are using the Management Server as the NFS server, you MUST NOT perform this step.
+When the script has finished, unmount secondary storage and remove the created directory.
+umount /mnt/secondary
+rmdir /mnt/secondary
+
+
+
+
+http://download.cloud.com/templates/4.2/bindir/cloud-set-guest-sshkey.in
+
+cat cloud-set-guest-sshkey.in
+mv cloud-set-guest-sshkey.in /etc/init.d/
+chmod +x /etc/init.d/cloud-set-guest-sshkey
+chkconfig --add cloud-set-guest-sshkey
+
+curl --globoff "http://localhost:8080/?command=createSSHKeyPair&name=keypair-doc&account=admin&domainid=1"
+
+
+curl --globoff http://localhost:<port number>/?command=deployVirtualMachine&zoneId=1&serviceOfferingId=18727021-7556-4110-9322-d625b52e0813&templateId=e899c18ace13-4bbf-98a9-625c5026e0b5&securitygroupids=ff03f02f-9e3b-48f8-834d-91b822da40c5&account=admin\&domainid=1&keypair=keypair-doc
+Substitute the template, service offering and security group IDs (if you are using the security group
+
+
+
+
+
+
+
+
+
+
+
+CloudStack可以上传ISO镜像作为系统的模板，不过要注意的是Hypervisor必须支持这种全虚拟化，能够使用ISO镜像安装虚拟机系统才行，很多老的主板都不支持。我在为CloudStack部署的镜像服务器中上传了CentOS 6.4 Minimal的ISO镜像，准备作为CloudStack模板来测试，CloudStack添加ISO的截图如下：
+
+
+URL填写的就是镜像服务器上该ISO镜像的http地址。输入完成点击OK上传ISO镜像，上传完发现状态是Connection Refused:
+
+
+模板用不了，查了下发现Global Settings中的secstorage.allowed.internal.sites的这一项没有设置，英文是：
+Comma separated list of cidrs internal to the datacenter that can host template download servers, please note 0.0.0.0 is not a valid site
+
+从意思来看，这一项是允许下载模板的服务器的IP地址设置，因为模板服务器我部署在内网上，IP是192.168.0.X段的，所以Value中输入192.168.0.1/24然后点击出现的绿色的勾，之后系统会提示需要重启管理平台。
+
+#service cloud-management restart
+
+
+即可重启CloudStack管理平台。重启管理平台后，CloudStack需要重新登录。
+
+删除掉原来的CentOS 6那个失败的模板，重新做一次，发现OK了。
+
+还有 http 的 ISO 类型
+
+
+
+
+
+
+
+
+
+
+WARN  [utils.nio.Link] (AgentManager-Selector:) SSL: Fail to find the generated keystore. Loading fail-safe one to continue.
+INFO  [network.security.SecurityGroupListener] (AgentConnectTaskPool-4:) Received a host startup notification
+INFO  [cloud.consoleproxy.AgentHookBase] (AgentConnectTaskPool-4:) Successfully sent out command to start HTTP handling in console proxy agent
+INFO  [cloud.servlet.ConsoleProxyServlet] (catalina-exec-18:) Parse host info returned from executing GetVNCPortCommand. host info: 10.10.50.62
+INFO  [cloud.vm.VirtualMachineManagerImpl] (Job-Executor-1:job-16 = [ 135c4c51-0a08-4873-a7bf-10d2f38ceef0 ]) Insufficient capacity 
+com.cloud.exception.InsufficientServerCapacityException: Unable to create a deployment for VM[DomainRouter|r-8-VM]Scope=interface com.cloud.dc.DataCenter; id=1
+        at com.cloud.vm.VirtualMachineManagerImpl.advanceStart(VirtualMachineManagerImpl.java:841)
+        at com.cloud.vm.VirtualMachineManagerImpl.start(VirtualMachineManagerImpl.java:577)
+        at com.cloud.network.router.VirtualNetworkApplianceManagerImpl.start(VirtualNetworkApplianceManagerImpl.java:2759)
+        at com.cloud.network.router.VirtualNetworkApplianceManagerImpl.startVirtualRouter(VirtualNetworkApplianceManagerImpl.java:1891)
+        at com.cloud.network.router.VirtualNetworkApplianceManagerImpl.startRouters(VirtualNetworkApplianceManagerImpl.java:1991)
+        at com.cloud.network.router.VirtualNetworkApplianceManagerImpl.deployVirtualRouterInGuestNetwork(VirtualNetworkApplianceManagerImpl.java:1969)
+        at com.cloud.network.element.VirtualRouterElement.prepare(VirtualRouterElement.java:222)
+        at com.cloud.network.NetworkManagerImpl.prepareElement(NetworkManagerImpl.java:2066)
+        at com.cloud.network.NetworkManagerImpl.prepareNic(NetworkManagerImpl.java:2200)
+        at com.cloud.network.NetworkManagerImpl.prepare(NetworkManagerImpl.java:2136)
+        at com.cloud.vm.VirtualMachineManagerImpl.advanceStart(VirtualMachineManagerImpl.java:886)
+        at com.cloud.vm.VirtualMachineManagerImpl.start(VirtualMachineManagerImpl.java:577)
+        at org.apache.cloudstack.engine.cloud.entity.api.VMEntityManagerImpl.deployVirtualMachine(VMEntityManagerImpl.java:227)
+        at org.apache.cloudstack.engine.cloud.entity.api.VirtualMachineEntityImpl.deploy(VirtualMachineEntityImpl.java:209)
+        at com.cloud.vm.UserVmManagerImpl.startVirtualMachine(UserVmManagerImpl.java:3484)
+        at com.cloud.vm.UserVmManagerImpl.startVirtualMachine(UserVmManagerImpl.java:3044)
+        at com.cloud.vm.UserVmManagerImpl.startVirtualMachine(UserVmManagerImpl.java:3030)
+        at com.cloud.utils.component.ComponentInstantiationPostProcessor$InterceptorDispatcher.intercept(ComponentInstantiationPostProcessor.java:125)
+        at org.apache.cloudstack.api.command.user.vm.DeployVMCmd.execute(DeployVMCmd.java:420)
+        at com.cloud.api.ApiDispatcher.dispatch(ApiDispatcher.java:158)
+        at com.cloud.async.AsyncJobManagerImpl$1.run(AsyncJobManagerImpl.java:531)
+        at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:471)
+        at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:334)
+        at java.util.concurrent.FutureTask.run(FutureTask.java:166)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1146)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)
+        at java.lang.Thread.run(Thread.java:701)
+WARN  [apache.cloudstack.alerts] (Job-Executor-1:job-16 = [ 135c4c51-0a08-4873-a7bf-10d2f38ceef0 ])  alertType:: 8 // dataCenterId:: 1 // podId:: 1 // clusterId:: null // message:: Failed to deploy Vm with Id: 7, on Host with Id: null
+INFO  [user.vm.DeployVMCmd] (Job-Executor-1:job-16 = [ 135c4c51-0a08-4873-a7bf-10d2f38ceef0 ]) com.cloud.exception.InsufficientServerCapacityException: Unable to create a deployment for VM[User|yyyy]Scope=interface com.cloud.dc.DataCenter; id=1
+INFO  [user.vm.DeployVMCmd] (Job-Executor-1:job-16 = [ 135c4c51-0a08-4873-a7bf-10d2f38ceef0 ]) Unable to create a deployment for VM[User|yyyy]
+com.cloud.exception.InsufficientServerCapacityException: Unable to create a deployment for VM[User|yyyy]Scope=interface com.cloud.dc.DataCenter; id=1
+        at com.cloud.vm.VirtualMachineManagerImpl.advanceStart(VirtualMachineManagerImpl.java:841)
+        at com.cloud.vm.VirtualMachineManagerImpl.start(VirtualMachineManagerImpl.java:577)
+        at org.apache.cloudstack.engine.cloud.entity.api.VMEntityManagerImpl.deployVirtualMachine(VMEntityManagerImpl.java:237)
+        at org.apache.cloudstack.engine.cloud.entity.api.VirtualMachineEntityImpl.deploy(VirtualMachineEntityImpl.java:209)
+        at com.cloud.vm.UserVmManagerImpl.startVirtualMachine(UserVmManagerImpl.java:3484)
+        at com.cloud.vm.UserVmManagerImpl.startVirtualMachine(UserVmManagerImpl.java:3044)
+        at com.cloud.vm.UserVmManagerImpl.startVirtualMachine(UserVmManagerImpl.java:3030)
+        at com.cloud.utils.component.ComponentInstantiationPostProcessor$InterceptorDispatcher.intercept(ComponentInstantiationPostProcessor.java:125)
+        at org.apache.cloudstack.api.command.user.vm.DeployVMCmd.execute(DeployVMCmd.java:420)
+        at com.cloud.api.ApiDispatcher.dispatch(ApiDispatcher.java:158)
+        at com.cloud.async.AsyncJobManagerImpl$1.run(AsyncJobManagerImpl.java:531)
+        at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:471)
+        at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:334)
+        at java.util.concurrent.FutureTask.run(FutureTask.java:166)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1146)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)
+        at java.lang.Thread.run(Thread.java:701)

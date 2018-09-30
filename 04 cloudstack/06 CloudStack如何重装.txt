@@ -1,0 +1,45 @@
+5、CloudStack如何重装
+
+安装完CloudStack后，我们往往会做各种实验，可能会把系统搞得很乱。想删除的话非常麻烦，因为它们之间往往存在层级关系，必须先从最底层删起。有没简单的办法直接推倒重来呢？答案是有的，最简单只要重置下其数据库即可。
+
+先停掉CloudStack服务：
+service cloudstack-management stop
+
+登陆mysql控制台，删除数据库：
+
+mysql -u root -p
+
+drop database cloud;
+drop database cloud_usage;
+drop database cloudbridge;
+quit;
+
+
+重新导入基础数据：
+
+ 
+
+ 
+cloudstack-setup-databases cloud:cloud@localhost --deploy-as=root:password
+
+cloudstack-setup-management
+
+ 
+
+ 
+1	mount -t nfs 127.0.0.1:/export/secondary /tmp/iso
+2	rm -rf /tmp/iso/
+3	cd /usr/share/cloudstack-common/scripts/storage/secondary/
+ 
+
+参考第7节，导入相应的系统虚机模板。
+
+重启cloudstack服务
+
+ 
+
+ 
+1	service cloudstack-management start
+ 
+
+这时，你再登陆就会发现一个全新的CloudStack啦。

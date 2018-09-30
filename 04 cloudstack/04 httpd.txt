@@ -1,0 +1,51 @@
+yum install -y httpd
+service httpd restart
+chkconfig httpd on
+
+vi /etc/httpd/conf/httpd.conf
+sed -i '/#AddType application\/x-tar/s/$/\nAddType application\/octet-stream  .iso/' /etc/httpd/conf/httpd.conf
+sed -i 's/#ServerName www.example.com:80/ServerName localhost:80/' /etc/httpd/conf/httpd.conf
+
+service httpd restart
+
+上传镜像到 cloudstack
+
+
+
+进入Cloudstack的管理界面进行全局配置
+secstorage.allowed.internal.sites 设置为 10.10.0.0/16
+service cloudstack-management restart
+
+
+
+
+wget http://downloads.sourceforge.net/project/cloudstack/SSH%20Key%20Gen%20Script/cloud-set-guestsshkey.
+in?r=http%3A%2F%2Fsourceforge.net%2Fprojects%2Fcloudstack%2Ffiles%2FSSH%2520Key%2520Gen%2520Script
+%2F&ts=1331225219&use_mirror=iweb
+
+
+cp cloud-set-guest-sshkey.in /etc/init.d/
+chmod +x /etc/init.d/cloud-set-guest-sshkey.in
+chkconfig --add cloud-set-guest-sshkey.in
+curl --globoff "http://localhost:8096/?command=createSSHKeyPair&name=keypair-doc&account=admin&domainid=5163440e-c44b-42b5-9109-ad75cae8e8a2"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
