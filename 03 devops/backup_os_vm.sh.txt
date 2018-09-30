@@ -1,0 +1,102 @@
+cat backup_os_vm.sh 
+
+
+
+#!/bin/bash
+export LANG_ALL=en_US.UTF-8
+
+source /root/openrc
+
+os_host_name=$1
+mkdir -p "/root/o/${os_host_name}"
+pool="volumes"
+
+vm_id=$(nova list --all-tenant | grep "${os_host_name}" | awk -F '|'  '{print $2}' | sed 's/^\s*\|\s*$//g')
+
+vm_name=$(nova list --all-tenant | grep "${os_host_name}" | awk -F '|'  '{print $3}' | sed 's/^\s*\|\s*$//g')
+
+vm_inst_id=$(nova show ${vm_id} | grep  instance- | awk -F '|' {'print $3'} | sed 's/^\s*\|\s*$//g')
+
+vm_inst_image_id=$(cinder list --all | grep ${vm_inst_id} | awk -F '|' {'print $2'} | sed 's/^\s*\|\s*$//g')
+
+vm_inst_image_id_ceph=$(rbd ls volumes | grep ${vm_inst_image_id})
+
+#rbd export $pool/${vm_inst_image_id_ceph} /root/o/${os_host_name}/${vm_name}.raw
+
+
+vm_disk_ids=$(cinder list --all-tenants | grep "${vm_id}" | grep -v instance- | grep in-use|cut -d '|' -f 2 | sed 's/^\s*\|\s*$//g')
+for i in $vm_disk_ids
+do
+  vm_disk_type=$(cinder list --all-tenants | grep "${vm_id}" | grep -v instance- | grep in-use|cut -d '|' -f 6 | sed 's/^\s*\|\s*$//g')
+  vm_disk_name=$(cinder list --all-tenants | grep "${vm_id}" | grep -v instance- | grep in-use|cut -d '|' -f 4 | sed 's/^\s*\|\s*$//g')
+  if [ "$vm_disk_type" == "performance" ];then
+    echo "$vm_disk_type"
+    pool="volumes_ssd"
+  fi
+  #rbd export $pool/volume-$i /root/o/${os_host_name}/${vm_name}_Disk_${vm_disk_name}.raw
+  pool="volumes"
+done
+
+
+cinder list --all-tenants | grep bffb1397-3ba8-4bb7-847e-6eb4d7eac6a5 | grep -v instance- | grep in-use|cut -d '|' -f 6 | cut -d ' ' -f 2
+
+
+
+传到 251 用qemu 转换成 vmdk 格式，再上传到 esxi 存储
+
+
+/usr/bin/rsync -auvzrP --bwlimit=6000 --rsh=ssh C65_WIKI_disk_C65_WIKI.raw 210.14.142.30:/var/www/html/vms_store/iso/
+
+qemu-img convert -f raw C65_WIKI_disk_C65_WIKI.raw -O vmdk C65_WIKI_disk_C65_WIKI.vmdk
+
+scp -P2233 C65_WIKI_disk_C65_WIKI.vmdk 175.25.181.252:/var/www/html/o/images/vmdk/
+
+scp C65_WIKI_disk_C65_WIKI.vmdk 210.14.142.30:/var/www/html/vms_store/iso/
+
+
+OS物理机空间问题
+
+迁移网络
+
+转换机磁盘空间
+
+
+
+
+### /usr/bin/rsync -auvzrP --bwlimit=6000 --rsh="ssh -p 2211" vmimage 124.236.16.101:/home
+
+
+
+
+/usr/bin/rsync -auvzrP --bwlimit=6000 --rsh=ssh C65_WIKI_disk_C65_WIKI.raw 175.25.181.251:/home/osimage
+
+
+/usr/bin/rsync -auvzrP --bwlimit=6000 'ssh -p 2233' C65_WIKI_disk_C65_WIKI.raw 175.25.181.251:/home/osimage
+
+
+scp -P2233 -l 8192 C65_WIKI_disk_C65_WIKI.raw 175.25.181.251:/home/osimage
+
+ssh-copy-id "-p 2233 175.25.181.251"
+
+scp -P2233 -l 81920 C65_WIKI_disk_C65_WIKI.raw 175.25.181.251:/home/osimage
+
+
+
+
+
+virt-install --name ps1 --vcpus=8 --ram 16384 \
+--disk path=/home/osimage/CentOS-7.2-x86_64-Mini.qcow2,device=disk,bus=virtio,format=qcow2 \
+--network bridge=virbr0,model=virtio \
+--network bridge=br0,model=virtio \
+--vnc --vncport=5901 --vnclisten=0.0.0.0 -v \
+--os-type=linux --os-variant=rhel7 --boot hd
+
+
+
+
+
+
+
+
+
+
