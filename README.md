@@ -20,15 +20,15 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
 
 ### 1.1  硬件
 
-服务器：4台，本文档采用最小化安装，至少4台物理机，每台至少三个网卡，计算节点要支持虚拟化。<br>
-存储设备：JBOD（磁盘柜）若干台<br>
-网络设备：交换机（普通网络交换机，千兆以上）1台，SAS交换机1台（可选），hba卡等<br>
+* 服务器：4台，本文档采用最小化安装，至少4台物理机，每台至少三个网卡，计算节点要支持虚拟化。<br>
+* 存储设备：JBOD（磁盘柜）若干台<br>
+* 网络设备：交换机（普通网络交换机，千兆以上）1台，SAS交换机1台（可选），hba卡等<br>
 
 ### 1.2  软件
 
-系统：CentOS 7 最小化安装<br>
-基础组件：mariadb,rabbitmq<br>
-OpenStack版本：Juno版<br>
+* 系统：CentOS 7 最小化安装<br>
+* 基础组件：mariadb,rabbitmq<br>
+* OpenStack版本：Juno版<br>
 
 
 ### 1.3  云平台架构
@@ -37,10 +37,10 @@ OpenStack版本：Juno版<br>
 
 ### 1.4  节点的功能与角色
 
-管理节点：管理云平台，主要安装管理类服务，如keystone,glance,nuetron,dashboard,nova-api等服务，以及一些基础组件，如mariadb,rabbitmq等。<br>
-计算节点：安装 nova-compute组件，提供计算虚拟化服务，及所需的资源，如内存，CPU等。<br>
-网络节点：安装 Neutron组件，提供网络虚拟化服务，通常与管理节点安装在一起。<br>
-存储节点：安装cinder-volume,ceph,nfs,zfs等组件，提供存储服务，可以安装在管理节点或计算节点上，一般由JBOD（磁盘柜）提供磁盘。<br>
+* 管理节点：管理云平台，主要安装管理类服务，如keystone,glance,nuetron,dashboard,nova-api等服务，以及一些基础组件，如mariadb,rabbitmq等。<br>
+* 计算节点：安装 nova-compute组件，提供计算虚拟化服务，及所需的资源，如内存，CPU等。<br>
+* 网络节点：安装 Neutron组件，提供网络虚拟化服务，通常与管理节点安装在一起。<br>
+* 存储节点：安装cinder-volume,ceph,nfs,zfs等组件，提供存储服务，可以安装在管理节点或计算节点上，一般由JBOD（磁盘柜）提供磁盘。<br>
 
 ### 1.5  节点网络规划
 
@@ -49,7 +49,7 @@ OpenStack版本：Juno版<br>
     <tr>
         <td colspan=7 align="center">云平台网络与服务器网卡对应表</td>
     </tr>
-    <tr>
+    <tr align="center">
         <td>交换机端口</td>
         <td>节点</td>	
         <td>安装的软件及服务</td>
