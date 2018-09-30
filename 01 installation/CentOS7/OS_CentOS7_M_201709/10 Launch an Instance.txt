@@ -1,0 +1,204 @@
+
+
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+
+neutron net-create --shared --provider:physical_network provider \
+  --provider:network_type flat provider
+
+neutron subnet-create --name provider \
+  --allocation-pool start=192.168.1.11,end=192.168.1.66 \
+  --dns-nameserver 8.8.8.8 --gateway 192.168.1.1 \
+  provider 192.168.1.0/24
+
+
+openstack flavor create --id 0 --vcpus 1 --ram 64 --disk 1 m1.nano
+
+
+
+
+source /etc/tenant/demo-openrc.sh
+
+
+openstack keypair create --public-key ~/.ssh/id_rsa.pub mykey
+
+openstack keypair list
+
+
+
+
+openstack security group rule create --proto icmp default
+openstack security group rule create --proto tcp --dst-port 22 default
+
+
+
+
+
+
+
+source /etc/tenant/demo-openrc.sh
+
+openstack flavor list
+
+openstack image list
+
+openstack network list
+
+openstack security group list
+
+
+openstack server create --flavor m1.tiny --image CirrOS-0.3.4-x86_64 \
+  --nic net-id=provider --security-group default \
+  --key-name mykey provider-instance
+
+
+openstack server list
+
+
+
+
+openstack console url show provider-instance
+
+
+
+
+
+
+
+
+
+
+
+source /etc/tenant/demo-openrc.sh
+
+ssh-keygen
+
+nova keypair-add --pub-key ~/.ssh/id_rsa.pub demo-key
+
+nova keypair-list
++----------+-------------------------------------------------+
+| Name     | Fingerprint                                     |
++----------+-------------------------------------------------+
+| demo-key | 52:ae:6c:d6:60:82:a1:e4:3c:42:24:ce:2b:3f:a3:d0 |
++----------+-------------------------------------------------+
+
+nova flavor-list
++----+-----------+-----------+------+-----------+------+-------+-------------+-----------+
+| ID | Name      | Memory_MB | Disk | Ephemeral | Swap | VCPUs | RXTX_Factor | Is_Public |
++----+-----------+-----------+------+-----------+------+-------+-------------+-----------+
+| 1  | m1.tiny   | 512       | 1    | 0         |      | 1     | 1.0         | True      |
+| 2  | m1.small  | 2048      | 20   | 0         |      | 1     | 1.0         | True      |
+| 3  | m1.medium | 4096      | 40   | 0         |      | 2     | 1.0         | True      |
+| 4  | m1.large  | 8192      | 80   | 0         |      | 4     | 1.0         | True      |
+| 5  | m1.xlarge | 16384     | 160  | 0         |      | 8     | 1.0         | True      |
++----+-----------+-----------+------+-----------+------+-------+-------------+-----------+
+
+nova image-list
++--------------------------------------+---------------------+--------+--------+
+| ID                                   | Name                | Status | Server |
++--------------------------------------+---------------------+--------+--------+
+| afc3210c-2a2d-4436-91bc-bef14253b2c4 | cirros-0.3.2-x86_64 | ACTIVE |        |
++--------------------------------------+---------------------+--------+--------+
+
+neutron net-list
++--------------------------------------+----------+-----------------------------------------------------+
+| id                                   | name     | subnets                                             |
++--------------------------------------+----------+-----------------------------------------------------+
+| 39ff211a-d651-4879-9aae-d168dcf0ec64 | ext-net  | f0103828-7329-40f4-bca8-91e9c2177fd5 10.0.0.0/16    |
+| b1497d1a-22a5-4df0-89b3-1c13900432a6 | demo-net | 65f8093a-30a9-43ac-aa3a-b6b134df08a7 10.1.1.0/24 |
++--------------------------------------+----------+-----------------------------------------------------+
+
+nova secgroup-list
++--------------------------------------+---------+-------------+
+| Id                                   | Name    | Description |
++--------------------------------------+---------+-------------+
+| d40dd0c6-54ff-4e40-841c-f85c7ce1705e | default | default     |
++--------------------------------------+---------+-------------+
+
+nova boot --flavor m1.tiny --image CirrOS-0.3.2-x86_64.qcow2 \
+--nic net-id=$(neutron net-list | awk '/ Pri-Net / {print $2}') \
+--security-group default --key-name demo-key demo-instance1
+
+
+
+nova list
+
+nova get-vnc-console demo-instance1 novnc
++-------+---------------------------------------------------------------------------------+
+| Type  | Url                                                                             |
++-------+---------------------------------------------------------------------------------+
+| novnc | http://controller:6080/vnc_auto.html?token=f382b4d5-e61f-4d23-8b1b-fcdaa78ee479 |
++-------+---------------------------------------------------------------------------------+
+
+ping -c 4 10.1.1.1
+
+ping -c 4 openstack.org
+
+nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+
+nova secgroup-add-rule default tcp 22 22 0.0.0.0/0
+
+nova secgroup-add-rule default tcp 3389 3389 0.0.0.0/0
+
+
+------------------
+neutron floatingip-create Pub-Net
+
+Created a new floatingip:
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| fixed_ip_address    |                                      |
+| floating_ip_address | 10.10.18.12                            |
+| floating_network_id | 39ff211a-d651-4879-9aae-d168dcf0ec64 |
+| id                  | 0412ad79-b102-4a4a-bf7c-c62a249fac22 |
+| port_id             |                                      |
+| router_id           |                                      |
+| status              | DOWN                                 |
+| tenant_id           | f531369adf054d7faa0fd286d8143856     |
++---------------------+--------------------------------------+
+
+neutron floatingip-create ext-net|awk '/ floating_ip_address / {print $4}'
+------------------
+
+
+nova floating-ip-associate demo-instance1 \
+`neutron floatingip-create Pub-Net|awk '/ \
+floating_ip_address / {print $4}'`
+
+
+nova list
+
+ping -c 4 10.0.38.12
+
+ssh cirros@10.0.38.12
+
+
+
+Cinderπ“‘ÿ≤‚ ‘
+
+sudo fdisk /dev/vdb
+n p w
+
+sudo mkfs.ext3 /dev/vdb
+
+sudo mount /dev/vdb /mnt/
+
+sudo ls -al /mnt/
+
+total 21
+drwxr-xr-x    3 root     root          4096 Dec  7 02:16 .
+drwxr-xr-x   21 root     root          1024 Dec  7 02:29 ..
+drwx------    2 root     root         16384 Dec  7 01:52 lost+found
+
+sudo touch /mnt/Test
+sudo ls -al /mnt/
+sudo umount /mnt
+
+exit
+
+
+

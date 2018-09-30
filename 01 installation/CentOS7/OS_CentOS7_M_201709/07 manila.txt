@@ -1,0 +1,232 @@
+
+
+
+
+
+mysql -u root -pMYSQL_ROOT_PASS_TENDCLOUD
+CREATE DATABASE manila;
+GRANT ALL PRIVILEGES ON manila.* TO 'manila'@'localhost' \
+  IDENTIFIED BY 'MANILA_DBPASS_TENDCLOUD';
+GRANT ALL PRIVILEGES ON manila.* TO 'manila'@'%' \
+  IDENTIFIED BY 'MANILA_DBPASS_TENDCLOUD';
+exit
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+openstack user create --domain default --password-prompt manila
+MANILA_PASS_TENDCLOUD
+
+openstack role add --project service --user manila admin
+
+
+
+
+openstack service create --name manila \
+  --description "OpenStack Shared File Systems" share
+
+
+openstack service create --name manilav2 \
+  --description "OpenStack Shared File Systems" sharev2
+
+
+
+openstack endpoint create --region RegionOne \
+  share public http://controller:8786/v1/%\(tenant_id\)s
+
+openstack endpoint create --region RegionOne \
+  share internal http://controller:8786/v1/%\(tenant_id\)s
+
+openstack endpoint create --region RegionOne \
+  share admin http://controller:8786/v1/%\(tenant_id\)s
+
+
+openstack endpoint create --region RegionOne \
+  sharev2 public http://controller:8786/v2/%\(tenant_id\)s
+
+openstack endpoint create --region RegionOne \
+  sharev2 internal http://controller:8786/v2/%\(tenant_id\)s
+openstack endpoint create --region RegionOne \
+  sharev2 admin http://controller:8786/v2/%\(tenant_id\)s
+
+
+
+
+yum install -y openstack-manila python-manilaclient
+
+openstack-config --set /etc/manila/manila.conf database \
+connection mysql+pymysql://manila:MANILA_DBPASS_TENDCLOUD@controller/manila
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+rpc_backend rabbit
+openstack-config --set /etc/manila/manila.conf oslo_messaging_rabbit \
+rabbit_host controller
+openstack-config --set /etc/manila/manila.conf oslo_messaging_rabbit \
+rabbit_userid guest
+openstack-config --set /etc/manila/manila.conf oslo_messaging_rabbit \
+rabbit_password RABBIT_GUEST_PASS_TENDCLOUD
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+default_share_type default_share_type
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+rootwrap_config /etc/manila/rootwrap.conf
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+auth_strategy keystone
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+auth_uri http://controller:5000
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+auth_url http://controller:35357
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+memcached_servers controller:11211
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+auth_type password
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+project_domain_name default
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+user_domain_name default
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+project_name service
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+username manila
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+password MANILA_PASS_TENDCLOUD
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+my_ip 10.10.33.11
+
+openstack-config --set /etc/manila/manila.conf oslo_concurrency \
+lock_path /var/lib/manila/tmp
+
+
+su -s /bin/sh -c "manila-manage db sync" manila
+
+
+
+systemctl enable openstack-manila-api.service openstack-manila-scheduler.service
+systemctl start openstack-manila-api.service openstack-manila-scheduler.service
+
+
+
+
+
+
+
+
+
+yum install -y openstack-manila-share python2-PyMySQL
+
+
+
+### ¿ªÊ¼ ###
+
+openstack-config --set /etc/manila/manila.conf database \
+connection mysql+pymysql://manila:MANILA_DBPASS_TENDCLOUD@controller/manila
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+rpc_backend rabbit
+openstack-config --set /etc/manila/manila.conf oslo_messaging_rabbit \
+rabbit_host controller
+openstack-config --set /etc/manila/manila.conf oslo_messaging_rabbit \
+rabbit_userid guest
+openstack-config --set /etc/manila/manila.conf oslo_messaging_rabbit \
+rabbit_password RABBIT_GUEST_PASS_TENDCLOUD
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+default_share_type default_share_type
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+rootwrap_config /etc/manila/rootwrap.conf
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+auth_strategy keystone
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+auth_uri http://controller:5000
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+auth_url http://controller:35357
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+memcached_servers controller:11211
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+auth_type password
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+project_domain_name default
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+user_domain_name default
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+project_name service
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+username manila
+openstack-config --set /etc/manila/manila.conf keystone_authtoken \
+password MANILA_PASS_TENDCLOUD
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+my_ip 10.10.33.11
+
+openstack-config --set /etc/manila/manila.conf oslo_concurrency \
+lock_path /var/lib/manila/tmp
+
+### ½áÊø ###
+
+
+
+yum install -y lvm2 nfs-utils nfs4-acl-tools portmap
+
+systemctl enable lvm2-lvmetad.service
+systemctl start lvm2-lvmetad.service
+
+
+
+
+
+vim /etc/lvm/lvm.conf
+
+devices {
+...
+filter = [ "a/sdb/", "a/sdd/", "r/.*/"]
+
+
+pvcreate /dev/sdd
+
+vgcreate manila-volumes /dev/sdd
+
+
+
+
+
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+enabled_share_backends lvm
+openstack-config --set /etc/manila/manila.conf DEFAULT \
+enabled_share_protocols NFS,CIFS
+
+
+
+
+openstack-config --set /etc/manila/manila.conf lvm \
+share_backend_name LVM
+openstack-config --set /etc/manila/manila.conf lvm \
+share_driver manila.share.drivers.lvm.LVMShareDriver
+openstack-config --set /etc/manila/manila.conf lvm \
+driver_handles_share_servers False
+openstack-config --set /etc/manila/manila.conf lvm \
+lvm_share_volume_group manila-volumes
+openstack-config --set /etc/manila/manila.conf lvm \
+lvm_share_export_ip 10.10.33.11
+
+
+
+systemctl enable openstack-manila-share.service
+systemctl start openstack-manila-share.service
+
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+manila service-list
+
+
+
+
+
+
+

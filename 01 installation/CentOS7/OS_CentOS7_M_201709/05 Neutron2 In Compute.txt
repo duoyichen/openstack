@@ -1,0 +1,149 @@
+
+
+
+
+
+
+yum install -y openstack-neutron-linuxbridge ebtables ipset
+
+
+openstack-config --set /etc/neutron/neutron.conf DEFAULT \
+rpc_backend rabbit
+openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit \
+rabbit_host controller
+openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit \
+rabbit_userid guest
+openstack-config --set /etc/neutron/neutron.conf oslo_messaging_rabbit \
+rabbit_password RABBIT_GUEST_PASS_TENDCLOUD
+
+openstack-config --set /etc/neutron/neutron.conf DEFAULT \
+auth_strategy keystone
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+auth_uri http://controller:5000
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+auth_url http://controller:35357
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+memcached_servers controller:11211
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+auth_type password
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+project_domain_name default
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+user_domain_name default
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+project_name service
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+username neutron
+openstack-config --set /etc/neutron/neutron.conf keystone_authtoken \
+password NEUTRON_PASS_TENDCLOUD
+
+openstack-config --set /etc/neutron/neutron.conf oslo_concurrency \
+lock_path /var/lib/neutron/tmp
+
+
+openstack-config --set /etc/neutron/plugins/ml2/linuxbridge_agent.ini \
+linux_bridge physical_interface_mappings provider:eno33554952
+openstack-config --set /etc/neutron/plugins/ml2/linuxbridge_agent.ini \
+vxlan enable_vxlan False
+openstack-config --set /etc/neutron/plugins/ml2/linuxbridge_agent.ini \
+securitygroup enable_security_group True
+openstack-config --set /etc/neutron/plugins/ml2/linuxbridge_agent.ini \
+securitygroup firewall_driver neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+
+
+
+openstack-config --set /etc/nova/nova.conf neutron \
+url http://controller:9696
+openstack-config --set /etc/nova/nova.conf neutron \
+auth_url http://controller:35357
+openstack-config --set /etc/nova/nova.conf neutron \
+auth_type password
+openstack-config --set /etc/nova/nova.conf neutron \
+project_domain_name default
+openstack-config --set /etc/nova/nova.conf neutron \
+user_domain_name default
+openstack-config --set /etc/nova/nova.conf neutron \
+region_name RegionOne
+openstack-config --set /etc/nova/nova.conf neutron \
+project_name service
+openstack-config --set /etc/nova/nova.conf neutron \
+username neutron
+openstack-config --set /etc/nova/nova.conf neutron \
+password NEUTRON_PASS_TENDCLOUD
+
+
+
+systemctl restart openstack-nova-compute.service
+
+
+systemctl enable neutron-linuxbridge-agent.service
+systemctl start neutron-linuxbridge-agent.service
+
+
+
+
+
+
+‘⁄controller node…œ
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+neutron ext-list
+
+neutron agent-list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+neutron net-create public --router:external True \
+--provider:physical_network external --provider:network_type flat
+
+neutron subnet-create public --name public-subnet \
+--allocation-pool start=10.0.23.11,end=10.0.23.111 \
+--disable-dhcp --gateway 10.0.0.1 10.0.23.0/16 \
+--dns-nameserver 10.0.0.1 \
+--dns-nameserver 8.8.8.8
+
+
+
+source /etc/tenant/demo-openrc.sh
+
+neutron net-create demo-net
+
+neutron subnet-create demo-net --name demo-subnet \
+--gateway 10.1.1.1 10.1.1.0/24 \
+--dns-nameserver 8.8.4.4 \
+--dns-nameserver 1.2.4.8 \
+--dns-nameserver 114.114.114.114
+
+neutron router-create demo-router
+
+neutron router-interface-add demo-router demo-subnet
+
+neutron router-gateway-set demo-router public
+
+
+ping -c 4 10.0.23.11
+
+

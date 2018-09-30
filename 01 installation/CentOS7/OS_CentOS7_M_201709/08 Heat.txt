@@ -1,0 +1,323 @@
+
+
+
+
+
+
+
+
+mysql -u root -pMYSQL_ROOT_PASS_TENDCLOUD
+CREATE DATABASE heat;
+GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' \
+  IDENTIFIED BY 'HEAT_DBPASS_TENDCLOUD';
+GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' \
+  IDENTIFIED BY 'HEAT_DBPASS_TENDCLOUD';
+exit
+
+
+
+source /etc/tenant/admin-openrc.sh
+
+openstack user create --domain default --password-prompt heat
+HEAT_PASS_TENDCLOUD
+
+openstack role add --project service --user heat admin
+
+
+
+
+openstack service create --name heat \
+  --description "Orchestration" orchestration
+
+
+
+openstack service create --name heat-cfn \
+  --description "Orchestration"  cloudformation
+
+
+
+
+openstack endpoint create --region RegionOne \
+  orchestration public http://controller:8004/v1/%\(tenant_id\)s
+
+openstack endpoint create --region RegionOne \
+  orchestration internal http://controller:8004/v1/%\(tenant_id\)s
+
+
+openstack endpoint create --region RegionOne \
+  orchestration admin http://controller:8004/v1/%\(tenant_id\)s
+
+
+
+openstack endpoint create --region RegionOne \
+  cloudformation public http://controller:8000/v1
+
+
+openstack endpoint create --region RegionOne \
+  cloudformation internal http://controller:8000/v1
+
+openstack endpoint create --region RegionOne \
+  cloudformation admin http://controller:8000/v1
+
+
+
+openstack domain create --description "Stack projects and users" heat
+
+openstack user create --domain heat --password-prompt heat_domain_admin
+HEAT_DOMAIN_ADMIN_PASS_TENDCLOUD
+
+openstack role add --domain heat --user-domain heat --user heat_domain_admin admin
+
+
+openstack role create heat_stack_owner
+
+openstack role add --project demo --user demo heat_stack_owner
+
+
+openstack role create heat_stack_user
+
+
+
+
+yum install openstack-heat-api openstack-heat-api-cfn \
+  openstack-heat-engine
+
+
+
+
+
+
+openstack-config --set /etc/heat/heat.conf database \
+connection mysql+pymysql://heat:HEAT_DBPASS_TENDCLOUD@controller/heat
+
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+rpc_backend rabbit
+openstack-config --set /etc/heat/heat.conf oslo_messaging_rabbit \
+rabbit_host controller
+openstack-config --set /etc/heat/heat.conf oslo_messaging_rabbit \
+rabbit_userid guest
+openstack-config --set /etc/heat/heat.conf oslo_messaging_rabbit \
+rabbit_password RABBIT_GUEST_PASS_TENDCLOUD
+
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+auth_strategy keystone
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+auth_uri http://controller:5000
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+auth_url http://controller:35357
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+memcached_servers controller:11211
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+auth_type password
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+project_domain_name default
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+user_domain_name default
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+project_name service
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+username heat
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+password HEAT_PASS_TENDCLOUD
+
+
+
+openstack-config --set /etc/heat/heat.conf trustee \
+auth_plugin password
+openstack-config --set /etc/heat/heat.conf trustee \
+auth_url http://controller:35357
+openstack-config --set /etc/heat/heat.conf trustee \
+username heat
+openstack-config --set /etc/heat/heat.conf trustee \
+password HEAT_PASS_TENDCLOUD
+openstack-config --set /etc/heat/heat.conf trustee \
+user_domain_name default
+
+
+
+openstack-config --set /etc/heat/heat.conf clients_keystone \
+auth_uri http://controller:35357
+openstack-config --set /etc/heat/heat.conf ec2authtoken \
+auth_uri http://controller:5000
+
+
+
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+heat_metadata_server_url http://controller:8000
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+heat_waitcondition_server_url http://controller:8000/v1/waitcondition
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+stack_domain_admin heat_domain_admin
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+stack_domain_admin_password HEAT_DOMAIN_ADMIN_PASS_TENDCLOUD
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+stack_user_domain_name heat
+
+
+
+su -s /bin/sh -c "heat-manage db_sync" heat
+
+
+
+
+systemctl enable openstack-heat-api.service \
+  openstack-heat-api-cfn.service openstack-heat-engine.service
+systemctl start openstack-heat-api.service \
+  openstack-heat-api-cfn.service openstack-heat-engine.service
+
+
+source /etc/tenant/admin-openrc.sh 
+openstack orchestration service list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mysql -u root -pMYSQL_ROOT_PASS_TENDCLOUD
+CREATE DATABASE heat;
+GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' \
+IDENTIFIED BY 'HEAT_DBPASS_SUR';
+GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' \
+IDENTIFIED BY 'HEAT_DBPASS_SUR';
+exit
+
+source /etc/tenant/admin-openrc.sh
+
+keystone user-create --name heat --pass HEAT_PASS_SUR \
+--email heat@example.com
+keystone user-role-add --user heat --tenant service --role admin
+
+keystone role-create --name heat_stack_owner
+
+keystone user-role-add --user demo --tenant demo --role heat_stack_owner
+
+keystone role-create --name heat_stack_user
+
+
+keystone service-create --name heat --type orchestration \
+--description "Orchestration"
+
+keystone service-create --name heat-cfn --type cloudformation \
+--description "Orchestration CloudFormation"
+
+keystone endpoint-create \
+--service-id $(keystone service-list | awk '/ orchestration / {print $2}') \
+--publicurl http://controller:8004/v1/%\(tenant_id\)s \
+--internalurl http://controller:8004/v1/%\(tenant_id\)s \
+--adminurl http://controller:8004/v1/%\(tenant_id\)s \
+--region regionOne
+
+keystone endpoint-create \
+--service-id $(keystone service-list | awk '/ cloudformation / {print $2}') \
+--publicurl http://controller:8000/v1 \
+--internalurl http://controller:8000/v1 \
+--adminurl http://controller:8000/v1 \
+--region regionOne
+
+
+
+yum install -y openstack-heat-api openstack-heat-api-cfn openstack-heat-engine \
+python-heatclient
+
+
+openstack-config --set /etc/heat/heat.conf \
+database connection mysql://heat:HEAT_DBPASS_SUR@controller/heat
+
+openstack-config --set /etc/heat/heat.conf \
+DEFAULT rpc_backend rabbit
+openstack-config --set /etc/heat/heat.conf \
+DEFAULT rabbit_host controller
+openstack-config --set /etc/heat/heat.conf \
+DEFAULT rabbit_password RABBIT_GUEST_PASS_SUR
+
+
+
+
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+auth_uri http://controller:5000/v2.0
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+identity_uri http://controller:35357
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+admin_tenant_name service
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+admin_user heat
+openstack-config --set /etc/heat/heat.conf keystone_authtoken \
+admin_password HEAT_PASS_SUR
+
+openstack-config --set /etc/heat/heat.conf ec2authtoken \
+auth_uri http://controller:5000/v2.0
+
+openstack-config --set /etc/heat/heat.conf \
+DEFAULT heat_metadata_server_url http://controller:8000
+openstack-config --set /etc/heat/heat.conf \
+DEFAULT heat_waitcondition_server_url http://controller:8000/v1/waitcondition
+
+openstack-config --set /etc/heat/heat.conf DEFAULT \
+verbose True
+
+
+su -s /bin/sh -c "heat-manage db_sync" heat
+
+
+systemctl enable openstack-heat-api.service openstack-heat-api-cfn.service \
+openstack-heat-engine.service
+systemctl start openstack-heat-api.service openstack-heat-api-cfn.service \
+openstack-heat-engine.service
+
+
+
+source /etc/tenant/demo-openrc.sh
+
+cat > test-stack.yml <<eof
+heat_template_version: 2014-10-16
+
+description: A simple server.
+
+parameters:
+  ImageID:
+    type: string
+    description: Image use to boot a server
+  NetID:
+    type: string
+    description: Network ID for the server
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: ImageID }
+      flavor: "m1.tiny"
+      networks:
+      - network: { get_param: NetID }
+
+outputs:
+  private_ip:
+    description: IP address of the server in the private network
+    value: { get_attr: [ server, first_address ] }
+eof
+
+
+NET_ID=$(nova net-list | awk '/ Pri-Net / { print $2 }')
+heat stack-create -f test-stack.yml \
+-P "ImageID=CirrOS-0.3.2-x86_64.qcow2;NetID=$NET_ID" testStack
+
+heat stack-list
+
+
+
+
+

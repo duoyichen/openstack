@@ -1,0 +1,582 @@
+firewall-cmd --permanent --direct --passthrough ipv4 -t nat -I POSTROUTING -o eno16777728 -j MASQUERADE -s 10.20.0.0/24
+
+route add default gw 10.20.0.2 dev eno16777728
+
+
+
+controller
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno16777728 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno16777728
+DEVICE=eno16777728
+ONBOOT=yes
+IPADDR=10.20.0.11
+NETMASK=255.255.255.0
+GATEWAY=10.20.0.2
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno33554952 <<eof
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=eno33554952
+DEVICE=eno33554952
+ONBOOT=yes
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno33554952 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno33554952
+DEVICE=eno33554952
+ONBOOT=yes
+IPADDR=192.168.33.11
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno50332176 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno50332176
+DEVICE=eno50332176
+ONBOOT=yes
+IPADDR=172.16.33.11
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno67109400 <<eof
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=eno67109400
+DEVICE=eno67109400
+ONBOOT=yes
+eof
+
+echo 'nameserver 10.10.0.252' > /etc/resolv.conf
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
+
+systemctl disable NetworkManager
+
+systemctl stop NetworkManager
+
+systemctl disable firewalld
+systemctl stop firewalld
+
+systemctl disable postfix
+systemctl stop postfix
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+setenforce 0
+
+
+hostnamectl --static set-hostname controller
+
+cat > /etc/hosts <<eof
+# compute2
+10.10.33.32       compute2
+# compute1
+10.10.33.31       compute1
+# controller
+10.10.33.11       controller
+eof
+
+sed -i 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' \
+/etc/ssh/sshd_config
+sed -i 's/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+init 6
+
+
+
+
+
+
+compute1
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno16777728 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno16777728
+DEVICE=eno16777728
+ONBOOT=yes
+IPADDR=10.10.33.31
+NETMASK=255.255.0.0
+GATEWAY=10.10.0.252
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno33554952 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno33554952
+DEVICE=eno33554952
+ONBOOT=yes
+IPADDR=192.168.33.31
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno50332176 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno50332176
+DEVICE=eno50332176
+ONBOOT=yes
+IPADDR=172.16.33.31
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno67109400 <<eof
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=eno67109400
+DEVICE=eno67109400
+ONBOOT=no
+eof
+
+
+echo 'nameserver 10.10.0.252' > /etc/resolv.conf
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
+
+systemctl disable NetworkManager
+
+systemctl stop NetworkManager
+
+systemctl disable firewalld
+systemctl stop firewalld
+
+systemctl disable postfix
+systemctl stop postfix
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+setenforce 0
+
+
+hostnamectl --static set-hostname compute1
+
+cat > /etc/hosts <<eof
+# compute2
+10.10.33.32       compute2
+# compute1
+10.10.33.31       compute1
+# controller
+10.10.33.11       controller
+eof
+
+sed -i 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' \
+/etc/ssh/sshd_config
+sed -i 's/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+init 6
+
+
+
+
+
+compute2
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno16777728 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno16777728
+DEVICE=eno16777728
+ONBOOT=yes
+IPADDR=10.10.33.32
+NETMASK=255.255.0.0
+GATEWAY=10.10.0.252
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno33554952 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno33554952
+DEVICE=eno33554952
+ONBOOT=yes
+IPADDR=192.168.33.32
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno50332176 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno50332176
+DEVICE=eno50332176
+ONBOOT=yes
+IPADDR=172.16.33.32
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno67109400 <<eof
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=eno67109400
+DEVICE=eno67109400
+ONBOOT=no
+eof
+
+
+echo 'nameserver 10.10.0.252' > /etc/resolv.conf
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
+
+systemctl disable NetworkManager
+
+systemctl stop NetworkManager
+
+systemctl disable firewalld
+systemctl stop firewalld
+
+systemctl disable postfix
+systemctl stop postfix
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+setenforce 0
+
+
+hostnamectl --static set-hostname compute2
+
+cat > /etc/hosts <<eof
+# compute2
+10.10.33.32       compute2
+# compute1
+10.10.33.31       compute1
+# controller
+10.10.33.11       controller
+eof
+
+sed -i 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' \
+/etc/ssh/sshd_config
+sed -i 's/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+init 6
+
+
+
+
+
+所有节点
+
+yum install -y chrony
+systemctl enable chronyd.service
+systemctl start chronyd.service
+
+controller节点
+sed -i '/ 3.centos.pool.ntp.org /a\
+server controller iburst' /etc/chrony.conf
+sed -i '/^#allow /a\
+allow 0.0.0.0\/0' /etc/chrony.conf
+
+非controller节点
+sed -i '/ 3.centos.pool.ntp.org /a\
+server controller iburst' /etc/chrony.conf
+sed -i '/.centos.pool.ntp.org iburst/d' /etc/chrony.conf
+
+所有节点
+
+chronyc sources
+
+
+
+
+ll /etc/yum.repos.d/
+mkdir /etc/yum.repos.d/bak
+mv /etc/yum.repos.d/C*.repo /etc/yum.repos.d/bak
+ll /etc/yum.repos.d/
+
+
+ll /etc/yum.repos.d/
+rm -f /etc/yum.repos.d/CentOS*.repo
+ll /etc/yum.repos.d/
+
+
+使用本地Yum源需跳过以下三步：
+
+
+
+yum install -y centos-release-openstack-mitaka
+
+
+yum upgrade -y
+reboot
+
+
+yum install -y openstack-selinux openstack-utils python-openstackclient
+
+根据网络环境，yum可能会报错，可以尝试更换 yum源：
+sed -i 's/mirror.centos.org/mirrors.aliyun.com/g' /etc/yum.repos.d/CentOS-OpenStack-mitaka.repo
+yum clean all
+
+
+
+
+yum install  -y mariadb mariadb-server python2-PyMySQL
+
+cat >> /etc/my.cnf.d/openstack.cnf <<eof
+[mysqld]
+bind-address = 0.0.0.0
+default-storage-engine = innodb
+innodb_file_per_table
+collation-server = utf8_general_ci
+character-set-server = utf8
+eof
+
+systemctl enable mariadb.service
+systemctl start mariadb.service
+
+mysql_secure_installation
+一路 回车 ，取默认，并设置 root 用户的密码为 MYSQL_ROOT_PASS_TENDCLOUD 。
+
+mysql -uroot -pMYSQL_ROOT_PASS_TENDCLOUD
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'MYSQL_ROOT_PASS_TENDCLOUD' WITH GRANT OPTION;
+FLUSH privileges;
+exit;
+
+
+yum install -y mongodb-server mongodb
+
+sed -i 's/bind_ip = 127.0.0.1/bind_ip = 0.0.0.0/g' /etc/mongod.conf
+sed -i 's/#smallfiles/smallfiles/g' /etc/mongod.conf
+
+systemctl enable mongod.service
+systemctl start mongod.service
+
+
+
+
+yum -y install rabbitmq-server
+
+systemctl enable rabbitmq-server.service
+systemctl start rabbitmq-server.service
+
+#rabbitmqctl add_user guest RABBIT_GUEST_PASS_TENDCLOUD
+
+rabbitmqctl change_password guest RABBIT_GUEST_PASS_TENDCLOUD
+rabbitmqctl set_permissions guest ".*" ".*" ".*"
+
+
+
+
+yum install -y memcached python-memcached
+
+systemctl enable memcached.service
+systemctl start memcached.service
+
+
+
+ping -c 4 openstack.org
+ping -c 4 controller
+ping -c 4 compute1
+ping -c 4 compute2
+ping -c 4 compute3
+ping -c 4 compute4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno16777728 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno16777728
+DEVICE=eno16777728
+ONBOOT=yes
+IPADDR=10.10.33.33
+NETMASK=255.255.0.0
+GATEWAY=10.10.0.252
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno33554952 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno33554952
+DEVICE=eno33554952
+ONBOOT=yes
+IPADDR=192.168.33.33
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno50332176 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno50332176
+DEVICE=eno50332176
+ONBOOT=yes
+IPADDR=172.16.33.33
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno67109400 <<eof
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=eno67109400
+DEVICE=eno67109400
+ONBOOT=no
+eof
+
+
+echo 'nameserver 10.10.0.252' > /etc/resolv.conf
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
+
+systemctl disable NetworkManager
+
+systemctl stop NetworkManager
+
+systemctl disable firewalld
+systemctl stop firewalld
+
+systemctl disable postfix
+systemctl stop postfix
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+setenforce 0
+
+
+hostnamectl --static set-hostname compute3
+
+cat > /etc/hosts <<eof
+# compute2
+10.10.33.32       compute2
+# compute1
+10.10.33.31       compute1
+# controller
+10.10.33.11       controller
+eof
+
+sed -i 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' \
+/etc/ssh/sshd_config
+sed -i 's/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+init 6
+
+
+
+
+
+
+
+
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno16777728 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno16777728
+DEVICE=eno16777728
+ONBOOT=yes
+IPADDR=10.10..33.34
+NETMASK=255.255.0.0
+GATEWAY=10.10.0.252
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno33554952 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno33554952
+DEVICE=eno33554952
+ONBOOT=yes
+IPADDR=192.168..33.34
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno50332176 <<eof
+TYPE=Ethernet
+BOOTPROTO=static
+NAME=eno50332176
+DEVICE=eno50332176
+ONBOOT=yes
+IPADDR=172.16..33.34
+NETMASK=255.255.0.0
+DEFROUTE=yes
+NM_CONTROLLED=no
+eof
+
+cat > /etc/sysconfig/network-scripts/ifcfg-eno67109400 <<eof
+TYPE=Ethernet
+BOOTPROTO=none
+NAME=eno67109400
+DEVICE=eno67109400
+ONBOOT=no
+eof
+
+
+echo 'nameserver 10.10.0.252' > /etc/resolv.conf
+echo 'nameserver 1.2.4.8' >> /etc/resolv.conf
+echo 'nameserver 114.114.114.114' >> /etc/resolv.conf
+
+systemctl disable NetworkManager
+
+systemctl stop NetworkManager
+
+systemctl disable firewalld
+systemctl stop firewalld
+
+systemctl disable postfix
+systemctl stop postfix
+
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+setenforce 0
+
+
+hostnamectl --static set-hostname compute4
+
+cat > /etc/hosts <<eof
+# compute2
+10.10.33.32       compute2
+# compute1
+10.10.33.31       compute1
+# controller
+10.10.33.11       controller
+eof
+
+sed -i 's/^GSSAPIAuthentication yes/GSSAPIAuthentication no/g' \
+/etc/ssh/sshd_config
+sed -i 's/^#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+init 6
+
