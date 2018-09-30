@@ -1,0 +1,147 @@
+
+vim modify_quota.sh
+
+
+
+#!/bin/bash
+
+n=2
+date=`date +%Y%m%d%H%M%S`
+timeout=30
+
+echo ""
+printf "Please input \33[;31\Cloud Host's Number:\33[0m(default is "$n"):\n"
+read -t ${timeout} n_input
+if [ "$n_input" != "" ]
+then
+n=$n_input
+fi
+
+cp /etc/nova/nova.conf /etc/nova/nova.conf.bak${date}
+cp /etc/cinder/cinder.conf /etc/cinder/cinder.conf.bak${date}
+cp /etc/neutron/neutron.conf /etc/neutron/neutron.conf.bak${date}
+
+svc_nova=`chkconfig | grep openstack-nova- | awk '/3:on/ {print $1}'`
+svc_cinder=`chkconfig | grep openstack-cinder- | awk '/3:on/ {print $1}'`
+svc_neutron=`chkconfig | grep neutron | awk '/3:on/ {print $1}'`
+
+
+sed -i "s/^quota_instances=.*/quota_instances=$n/g" /etc/nova/nova.conf
+sed -i "s/^quota_cores=.*/quota_cores=$[2*n]/g" /etc/nova/nova.conf
+sed -i "s/^quota_ram=.*/quota_ram=$[2048*2*n]/g" /etc/nova/nova.conf
+sed -i "s/^quota_floating_ips=.*/quota_floating_ips=$n/g" /etc/nova/nova.conf
+sed -i "s/^quota_volumes=.*/quota_volumes=$[2*n]/g" /etc/nova/nova.conf
+sed -i "s/^quota_gigabytes=.*/quota_gigabytes=$[100*n]/g" /etc/nova/nova.conf
+
+for i in $svc_nova;
+  do
+    echo "restarting $i ..."
+    service $i restart;
+done
+
+
+sed -i "s/^quota_volumes=.*/quota_volumes=$[2*n]/g" /etc/cinder/cinder.conf
+sed -i "s/^quota_snapshots=.*/quota_snapshots=$n/g" /etc/cinder/cinder.conf
+sed -i "s/^quota_gigabytes=.*/quota_gigabytes=$[100*n]/g" /etc/cinder/cinder.conf
+
+for i in $svc_cinder;
+  do
+    echo "restarting $i ..."
+    service $i restart;
+done
+
+
+sed -i "s/^# quota_router =.*/quota_router = 1/g" /etc/neutron/neutron.conf
+#sed -i "s/^# quota_floatingip =.*/quota_floatingip = $n/g" /etc/neutron/neutron.conf
+sed -i "s/^quota_floatingip =.*/quota_floatingip = $n/g" /etc/neutron/neutron.conf
+
+
+for i in $svc_neutron;
+  do
+    echo "restarting $i ..."
+    service $i restart;
+done
+
+echo ""
+echo ""
+echo "---------------------------------------------"
+printf "\33[;31mModify configuration Files Finished!\33[0m\n"
+echo "---------------------------------------------"
+
+
+echo ""
+printf "\33[;31mYou Only Need to Modify the DataBase for Once!\33[0m\n"
+printf "\33[;31mInput [yes|YES] for Modify the DataBase and Press [any Key] for No:\33[0m\n"
+read -t ${timeout} is_modify_database
+echo -e "Your Input is: ${is_modify_database}"
+case "${is_modify_database}" in
+yes|YES|Yes)
+echo "Modify Database ...";
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use cinder;update quota_classes set hard_limit = "$[2*n]" where resource = 'volumes';"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use cinder;update quota_classes set hard_limit = "$n" where resource = 'snapshots';"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use cinder;update quota_classes set hard_limit = "$[100*n]" where resource = 'gigabytes';"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use cinder;update quota_classes set hard_limit = "$[100*n]" where resource = 'gigabytes_capacity';"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use cinder;update quota_classes set hard_limit = "$n" where resource = 'snapshots_capacity';"
+mysql -uroot -pMYSQL_ROOT_PASS_CM -e "use cinder;update quota_classes set hard_limit = "$[2*n]" where resource = 'volumes_capacity';"
+;;
+*)
+echo "The Database have modified already, Nothing to do ...";
+;;
+esac
+
+
+echo ""
+echo ""
+echo "---------------------------------------------"
+printf "\33[;31mModify Database Finished, and All is OK!\33[0m\n"
+echo "---------------------------------------------"
+
+
+
+
+
+for i in `cat /etc/hosts|awk '/node-/ {print $3}'`;do scp /root/o/modify_quota.sh $i:/root/;ssh $i "sh /root/modify_quota.sh && rm -rf /root/modify_quota.sh";done
+
+
+
+
+
+
+
+
+
+
+
+mysql -uroot -pMYSQL_ROOT_PASS_CM
+use cinder;
+select * FROM quota_classes;
+select * FROM quota_classes where resource = "volumes";
+
+update quota_classes set hard_limit = "4" where resource = "volumes";
+update quota_classes set hard_limit = "2" where resource = "snapshots";
+update quota_classes set hard_limit = "200" where resource = "gigabytes";
+
+update quota_classes set hard_limit = "200" where resource = "gigabytes_capacity";
+update quota_classes set hard_limit = "2" where resource = "snapshots_capacity";
+update quota_classes set hard_limit = "4" where resource = "volumes_capacity";
+
+
+
+
+
+
+
+# quota_router = 10
+# quota_floatingip = 50
+
+
+
+
+
+
+
+
+
+
+
+
