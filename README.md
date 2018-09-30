@@ -47,17 +47,12 @@ OpenStack版本：Juno版<br>
 
 
 
-|云平台网络与服务器网卡对应表|||||||
+||||云平台网络与服务器网卡对应表||||
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-
 |交换机端口|	节点|	安装的软件及服务|	网卡|	IP|	网络规划|	其他|
-|	|controller||||||
-(node1)	MariaDB,RabbitMQ,ntp
-Keystone
-Glance
-Neutron
-Dashboard
-nova-api,cinder-api等	NIC0	10.0.33.11/24	管理网络	千兆
+|	|controller<br>(node1)|MariaDB,RabbitMQ,ntp<br>Keystone<br>Glance<br>Neutron<br>Dashboard<br>nova-api,cinder-api等|||||
+	
+	NIC0	10.0.33.11/24	管理网络	千兆
 			NIC1	192.168.33.11/24	私有网络	千兆以上
 			NIC2	172.16.33.11/24	存储网络	万兆
 			NIC3	10.0.38.0/24	外部网络	千兆
