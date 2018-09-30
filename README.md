@@ -15,33 +15,33 @@ OpenStack的安装部署，运维排错，以及平台开发等相关文档。�
 
 
 
-#1. 搭建环境
+# 1. 搭建环境
 
-###1.1  硬件
+### 1.1  硬件
 
 服务器：4台，本文档采用最小化安装，至少4台物理机，每台至少三个网卡，计算节点要支持虚拟化。
 存储设备：JBOD（磁盘柜）若干台
 网络设备：交换机（普通网络交换机，千兆以上）1台，SAS交换机1台（可选），hba卡等
 
-###1.2  软件
+### 1.2  软件
 
 系统：CentOS 7 最小化安装
 基础组件：mariadb,rabbitmq
 OpenStack版本：Juno版
 
 
-###1.3  云平台架构
+### 1.3  云平台架构
 
 
 
-###1.4  节点的功能与角色
+### 1.4  节点的功能与角色
 
 管理节点：管理云平台，主要安装管理类服务，如keystone,glance,nuetron,dashboard,nova-api等服务，以及一些基础组件，如mariadb,rabbitmq等。
 计算节点：安装 nova-compute组件，提供计算虚拟化服务，及所需的资源，如内存，CPU等。
 网络节点：安装 Neutron组件，提供网络虚拟化服务，通常与管理节点安装在一起。
 存储节点：安装cinder-volume,ceph,nfs,zfs等组件，提供存储服务，可以安装在管理节点或计算节点上，一般由JBOD（磁盘柜）提供磁盘。
 
-###1.5  节点网络规划
+### 1.5  节点网络规划
 
 
 云平台网络与服务器网卡对应表
@@ -87,11 +87,11 @@ ceph	NIC0	10.0.33.33/24	管理网络	千兆
 
 
 
-#2. 系统初始化
+# 2. 系统初始化
 
 
 
-###2.1  准备 Controller Node
+### 2.1  准备 Controller Node
  
 2.1.1  网络，主机名等相关参数配置
 
@@ -224,7 +224,7 @@ rabbitmqctl change_password guest RABBIT_GUEST_PASS_SUR
 到这里，Controller Node 的初始化完成。
 
 
-###2.2  准备 Compute Node
+### 2.2  准备 Compute Node
 
 2.2.1  网络，主机名等相关参数配置
 
@@ -327,7 +327,7 @@ reboot
 到这里，Compute Node 的初始化也完成。
 
 
-###2.3  验证网络
+### 2.3  验证网络
 
 在 Controller Node 上：
 ping -c 4 openstack.org
@@ -349,11 +349,11 @@ ping -c 4 controller
 
 
 
-#3. 配置Identity Service
+# 3. 配置Identity Service
 
 
 
-###3.1  在 Controller Node 上安装 Identity Service
+### 3.1  在 Controller Node 上安装 Identity Service
 
 3.1.1  安装Identity Service
 yum install -y openstack-keystone python-keystoneclient
@@ -390,7 +390,7 @@ chmod -R o-rwx /etc/keystone/ssl
 systemctl enable openstack-keystone.service
 systemctl start openstack-keystone.service
 
-###3.2  定义 Users（用户） Tennts（租户）  及 roles（角色）
+### 3.2  定义 Users（用户） Tennts（租户）  及 roles（角色）
 
 3.2.1  配置 authorization token 等环境变量
 export OS_SERVICE_TOKEN=ADMIN_TOKEN_SUR
@@ -482,7 +482,7 @@ keystone tenant-create --name=service --description="Service Tenant"
 +-------------+----------------------------------+
 
 
-###3.3  定义服务，及  API 终端
+### 3.3  定义服务，及  API 终端
 
 3.3.1  为  Identity Service 创建一个 service entry
 keystone service-create --name=keystone --type=identity \
@@ -519,7 +519,7 @@ keystone endpoint-create \
 +-------------+----------------------------------+
 
 
-###3.4  验证 Identity Service 安装
+### 3.4  验证 Identity Service 安装
 
 3.4.1  取消前面设置的环境变量
 unset OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
