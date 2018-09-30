@@ -1,0 +1,22 @@
+#/bin/bash
+
+
+source /root/openrc
+
+nova_list=`nova list --all-tenants|grep "Running"|grep ','|awk -F ',' '{print $2}'|awk -F ' ' '{print $1}'|awk -F ';' '{print $1}'`
+
+for i in  $nova_list;do ping -c 1 $i >> /dev/null && (echo "$i is OK";echo "$i" >> ok_list.txt) || (echo "$i is Bad";echo "$i" >> bad_list.txt);done
+
+
+echo ""
+echo ""
+echo ""
+echo "---------------------------------"
+echo ""
+echo "$(cat ok_list.txt|wc -l) is OK"
+echo "$(cat bad_list.txt|wc -l) is Bad"
+
+
+
+
+

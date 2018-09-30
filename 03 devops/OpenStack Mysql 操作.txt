@@ -1,0 +1,209 @@
+
+
+mysql -e "use cinder;select * from volumes where display_name='xinda-zhou-3'\G;"
+*************************** 1. row ***************************
+         created_at: 2017-07-24 07:17:29
+         updated_at: 2017-08-10 03:06:16
+         deleted_at: NULL
+            deleted: 0
+                 id: ae085b1a-f4d6-4eb6-b8f1-c9a9fddbe032
+             ec2_id: NULL
+            user_id: ac8e37c5a5114ce3848d904402efce16
+         project_id: ba244b099ed543908d5b59373fad70c7
+               host: rbd:volumes@capacity
+               size: 100
+  availability_zone: nova
+             status: detaching
+      attach_status: attached
+       scheduled_at: 2017-07-24 07:17:29
+        launched_at: 2017-07-24 07:17:29
+      terminated_at: NULL
+       display_name: xinda-zhou-3
+display_description: 
+  provider_location: NULL
+      provider_auth: NULL
+        snapshot_id: NULL
+     volume_type_id: bf3e5040-ac0e-4b6c-81b9-c13dc5e6f013
+       source_volid: NULL
+           bootable: 0
+  provider_geometry: NULL
+           _name_id: NULL
+  encryption_key_id: NULL
+   migration_status: NULL
+        multiattach: 0
+
+
+
+卸载之前：
+
+mysql -e "use cinder;select * from volumes where display_name='test-ssd2'\G;"
+*************************** 1. row ***************************
+         created_at: 2016-10-31 07:03:33
+         updated_at: 2017-07-10 10:01:48
+         deleted_at: NULL
+            deleted: 0
+                 id: f7f95892-ef6f-4315-811e-e8ea0af0df2b
+             ec2_id: NULL
+            user_id: 573ee15f09244b1ea910711ed83bafbd
+         project_id: 0730378a59684cdf8103242c4847e84b
+               host: rbd:volumes@performance
+               size: 100
+  availability_zone: nova
+             status: in-use
+      attach_status: attached
+       scheduled_at: 2016-10-31 07:03:33
+        launched_at: 2016-10-31 07:03:34
+      terminated_at: NULL
+       display_name: test-ssd2
+display_description: 
+  provider_location: NULL
+      provider_auth: NULL
+        snapshot_id: NULL
+     volume_type_id: 7d68f8c9-7cfa-4470-94b5-a132297c3f88
+       source_volid: NULL
+           bootable: 0
+  provider_geometry: NULL
+           _name_id: NULL
+  encryption_key_id: NULL
+   migration_status: NULL
+        multiattach: 0
+
+
+
+卸载以后：
+
+mysql -e "use cinder;select * from volumes where display_name='test-ssd2'\G;"
+*************************** 1. row ***************************
+         created_at: 2016-10-31 07:03:33
+         updated_at: 2017-08-10 05:21:29
+         deleted_at: NULL
+            deleted: 0
+                 id: f7f95892-ef6f-4315-811e-e8ea0af0df2b
+             ec2_id: NULL
+            user_id: 573ee15f09244b1ea910711ed83bafbd
+         project_id: 0730378a59684cdf8103242c4847e84b
+               host: rbd:volumes@performance
+               size: 100
+  availability_zone: nova
+             status: available
+      attach_status: detached
+       scheduled_at: 2016-10-31 07:03:33
+        launched_at: 2016-10-31 07:03:34
+      terminated_at: NULL
+       display_name: test-ssd2
+display_description: 
+  provider_location: NULL
+      provider_auth: NULL
+        snapshot_id: NULL
+     volume_type_id: 7d68f8c9-7cfa-4470-94b5-a132297c3f88
+       source_volid: NULL
+           bootable: 0
+  provider_geometry: NULL
+           _name_id: NULL
+  encryption_key_id: NULL
+   migration_status: NULL
+        multiattach: 0
+
+
+
+
+
+
+
+查询某个主机
+use cinder;select * from volume_attachment where instance_uuid='c0f912e5-057a-4c12-bef8-9302c0978bf4'\G;
+
+
+
+通过 instances 的 display_name 查出其 uuid
+
+use nova;select uuid from instances where display_name='test2'
+
+
+查询该云主机挂载的云盘
+
+use cinder;select * from volume_attachment where 
+instance_uuid=(select uuid from nova.instances where display_name='W2008_S_2')\G;
+
+
+
+
+
+
+select id from cinder.volume_attachment where mountpoint !='vda' and instance_uuid=(select uuid from nova.instances where display_name='W2008_S_2')
+
+
+
+
+mysql -e "
+select display_name from cinder.volumes where id=
+(select volume_id from cinder.volume_attachment where mountpoint !='vda' and instance_uuid=
+(select uuid from nova.instances where display_name='W2008_S_2'))\G;
+"
+
+
+
+
+
+mysql -e "use cinder;select * from volumes where display_name='test-ssd2'\G;"
+
+mysql -e "use cinder;update volumes set status = 'available',attach_status = 'detached' where display_name = 'test-ssd2';"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[root@node-51 ~]# ceph -w       
+    cluster 1e3f3981-e38d-43e5-9c2d-de4c3b118409
+     health HEALTH_OK
+     monmap e3: 3 mons at {node-51=10.30.40.3:6789/0,node-52=10.30.40.4:6789/0,node-53=10.30.40.5:6789/0}, election epoch 14488, quorum 0,1,2 node-51,node-52,node-53
+     osdmap e21071: 84 osds: 81 up, 81 in
+      pgmap v33239649: 7232 pgs, 7 pools, 8051 GB data, 2113 kobjects
+            24059 GB used, 198 TB / 221 TB avail
+                7232 active+clean
+  client io 29388 B/s rd, 1591 kB/s wr, 263 op/s
+
+2017-08-10 13:27:12.647145 mon.0 [INF] pgmap v33239648: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 89509 B/s rd, 2790 kB/s wr, 597 op/s
+2017-08-10 13:27:13.727675 mon.0 [INF] pgmap v33239649: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 29388 B/s rd, 1591 kB/s wr, 263 op/s
+2017-08-10 13:27:14.993881 mon.0 [INF] pgmap v33239650: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 86259 B/s rd, 2163 kB/s wr, 838 op/s
+2017-08-10 13:27:16.053934 mon.0 [INF] pgmap v33239651: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 155 kB/s rd, 3761 kB/s wr, 1533 op/s
+2017-08-10 13:27:17.279092 mon.0 [INF] pgmap v33239652: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 78493 B/s rd, 2467 kB/s wr, 972 op/s
+2017-08-10 13:27:18.325161 mon.0 [INF] pgmap v33239653: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 1793 B/s rd, 686 kB/s wr, 208 op/s
+2017-08-10 13:27:19.411031 mon.0 [INF] pgmap v33239654: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 192 kB/s rd, 2935 kB/s wr, 806 op/s
+2017-08-10 13:27:20.592521 mon.0 [INF] pgmap v33239655: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 200 kB/s rd, 4479 kB/s wr, 1326 op/s
+2017-08-10 13:27:22.667430 mon.0 [INF] pgmap v33239656: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 30634 B/s rd, 3289 kB/s wr, 1075 op/s
+2017-08-10 13:27:23.706964 mon.0 [INF] pgmap v33239657: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 12025 B/s rd, 1372 kB/s wr, 442 op/s
+2017-08-10 13:27:25.827459 mon.0 [INF] pgmap v33239658: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 994 kB/s rd, 1923 kB/s wr, 555 op/s
+2017-08-10 13:27:26.014885 mon.0 [INF] pgmap v33239659: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 1436 kB/s rd, 3729 kB/s wr, 1227 op/s
+2017-08-10 13:27:27.991116 mon.0 [INF] pgmap v33239660: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 66407 B/s rd, 2511 kB/s wr, 712 op/s
+2017-08-10 13:27:29.039577 mon.0 [INF] pgmap v33239661: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 2666 B/s rd, 2153 kB/s wr, 419 op/s
+2017-08-10 13:27:30.085590 mon.0 [INF] pgmap v33239662: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 10619 B/s rd, 2616 kB/s wr, 691 op/s
+2017-08-10 13:27:31.219409 mon.0 [INF] pgmap v33239663: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 42508 B/s rd, 5059 kB/s wr, 1375 op/s
+2017-08-10 13:27:32.440006 mon.0 [INF] pgmap v33239664: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 30044 B/s rd, 3624 kB/s wr, 987 op/s
+2017-08-10 13:27:33.532453 mon.0 [INF] pgmap v33239665: 7232 pgs: 7232 active+clean; 8051 GB data, 24059 GB used, 198 TB / 221 TB avail; 10770 B/s rd, 658 kB/s wr, 196 op/s
+^C[root@node-51 ~]# 
+[root@node-51 ~]# 
+[root@node-51 ~]# ceph -s
+    cluster 1e3f3981-e38d-43e5-9c2d-de4c3b118409
+     health HEALTH_OK
+     monmap e3: 3 mons at {node-51=10.30.40.3:6789/0,node-52=10.30.40.4:6789/0,node-53=10.30.40.5:6789/0}, election epoch 14488, quorum 0,1,2 node-51,node-52,node-53
+     osdmap e21071: 84 osds: 81 up, 81 in
+      pgmap v33239669: 7232 pgs, 7 pools, 8051 GB data, 2113 kobjects
+            24059 GB used, 198 TB / 221 TB avail
+                7232 active+clean
+  client io 176 kB/s rd, 575 kB/s wr, 184 op/s
